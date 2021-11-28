@@ -39,7 +39,7 @@ contract Bridge is IBridgeNonFungible, Controllable {
 	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferFungible` event
 	 */
 	function transferFungible(address token, uint256 amount, uint256 networkId) external virtual override {
-      require(networkId != chainId(), "Same chainId");
+      // require(networkId != chainId(), "Same chainId");
 
 		IERC20Upgradeable(token).transferFrom(_msgSender(), address(this), amount);
 
@@ -83,10 +83,10 @@ contract Bridge is IBridgeNonFungible, Controllable {
 
 	/**
 	 * @dev Transfers an ERC721 token to a different chain
-	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferFungible` event
+	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferNonFungible` event
 	 */
 	function transferNonFungible(address token, uint256 tokenId, uint256 networkId) external virtual override {
-      require(networkId != chainId(), "Same chainId");
+      // require(networkId != chainId(), "Same chainId");
 
 		IERC721Upgradeable(token).transferFrom(_msgSender(), address(this), tokenId);
 
