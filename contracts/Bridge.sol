@@ -1,16 +1,23 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "./IBridge.sol";
+import "./IBridgeNonFungible.sol";
 import "./Controllable.sol";
+import "./IERC721Bridgable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
-contract Bridge is IBridge, Controllable {
+contract Bridge is IBridgeNonFungible, Controllable {
 	/**
 	 * @notice Stores how many of each token each user has a claim to
 	 * mapping is as follows: user's address => token contract address => amount of token
 	 */
 	mapping (address => mapping (address => uint256)) public fungibleClaims; 
+
+	/**
+	 * @notice Stores how many of each token each user has a claim to
+	 * mapping is as follows: user's address => token contract address => amount of token
+	 */
+	mapping (address => mapping (address => mapping (uint256 => bool))) public nonFungibleClaims; 
 
 	function initialize(address _controller) public virtual override initializer {
 		Controllable.initialize(_controller);
@@ -71,6 +78,60 @@ contract Bridge is IBridge, Controllable {
 
 		for(uint256 i = 0; i < tos.length; i++) {
 			fungibleClaims[tos[i]][tokens[i]] += amounts[i];
+		}
+	}
+
+	/**
+	 * @dev Transfers an ERC721 token to a different chain
+	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferFungible` event
+	 */
+	function transferNonFungible(address token, uint256 tokenId, uint256 networkId) external virtual override {
+      require(networkId != chainId(), "Same chainId");
+
+		IERC721Upgradeable(token).transferFrom(_msgSender(), address(this), tokenId);
+
+		emit TokenTransferNonFungible(_msgSender(), token, tokenId, networkId);
+	}
+
+	/**
+	 * @dev Claim a token that was transfered from another network
+	 * Sends the caller the specified token, if they have a valid claim to the token
+	 * MUST emit a `TokenClaimedFungible` event on success
+	 */
+	function claimNonFungible(address token, uint256 tokenId) external virtual override {
+		require(nonFungibleClaims[_msgSender()][token][tokenId], "Insufficient claimable tokens");
+
+		nonFungibleClaims[_msgSender()][token][tokenId] = false;
+
+		// Check if the token needs to be minted
+		// If it does, attempt to mint it (will fail if this contract has no such permission, or the ERC721 contract doesn't support bridgeMint)
+		// If the token exists, and the owner is this contract, it will be sent like normal
+		// Otherwise this contract will revert
+		if(IERC721Bridgable(token).ownerOf(tokenId) == address(0)) {
+			IERC721Bridgable(token).bridgeMint(_msgSender(), tokenId);
+		} else {
+			IERC721Bridgable(token).transferFrom(address(this), _msgSender(), tokenId);
+		}
+
+		emit TokenClaimedNonFungible(_msgSender(), token, tokenId);
+	}
+
+	/**
+	 * @dev Used by the bridge network to add a claim to an ERC721 token
+	 */
+	function addClaimNonFungible(address token, address to, uint256 tokenId) external virtual override onlyController {
+		nonFungibleClaims[to][token][tokenId] = true;
+	}
+	
+	/**
+	 * @dev Used by the bridge network to add multiple claims to an ERC721 token
+	 */
+	function addClaimNonFungibleBatch(address[] calldata tokens, address[] calldata tos, uint256[] calldata tokenIds) external virtual override onlyController {
+		require(tokens.length == tos.length, "Array size mismatch");
+		require(tos.length == tokenIds.length, "Array size mismatch");
+
+		for(uint256 i = 0; i < tos.length; i++) {
+			nonFungibleClaims[tos[i]][tokens[i]][tokenIds[i]] = true;
 		}
 	}
 }
