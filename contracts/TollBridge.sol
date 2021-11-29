@@ -20,6 +20,8 @@ contract TollBridge is Bridge {
 	uint256 public fungibleFee;
 	uint256 public nonFungibleFee;
 	uint256 public mixedFungibleFee;
+	// Fees that have been paid and can be withdrawn from this contract
+	uint256 public pendingFees;
 
 	function initialize(address _controller, address _tollToken) public virtual initializer {
 		tollToken = IERC20Upgradeable(_tollToken);
@@ -208,7 +210,13 @@ contract TollBridge is Bridge {
 	/**
 	* @dev Used by the bridge network to add multiple claims to an ERC1155 token
 	*/
-	function addClaimMixedFungibleBatchWithFeeRebate(address[] calldata tokens, address[] calldata tos, uint256[] calldata tokenIds, uint256[] calldata amounts, uint256[] calldata feeRebates) external virtual onlyController {
+	function addClaimMixedFungibleBatchWithFeeRebate(
+		address[] calldata tokens,
+		address[] calldata tos,
+		uint256[] calldata tokenIds,
+		uint256[] calldata amounts,
+		uint256[] calldata feeRebates
+	) external virtual onlyController {
 		require(tokens.length == tos.length, "Array size mismatch");
 		require(tos.length == tokenIds.length, "Array size mismatch");
 		require(tokenIds.length == amounts.length, "Array size mismatch");
@@ -217,6 +225,12 @@ contract TollBridge is Bridge {
 			mixedFungibleClaims[tos[i]][tokens[i]][tokenIds[i]] += amounts[i];
 			availableRebates[tos[i]] += feeRebates[i];
 		}
+	}
+
+	function withdrawalFees(uint256 amount) external virtual onlyController {
+		require(pendingFees >= amount, "Insufficient funds");
+		pendingFees -= amount;
+		tollToken.transfer(_msgSender(), amount);
 	}
 
 	function _rebateFee(address to) internal {
