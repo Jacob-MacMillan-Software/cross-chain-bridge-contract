@@ -1,58 +1,59 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "./IBridgeNonFungible.sol";
-import "./IBridgeMixedFungible.sol";
-import "./Controllable.sol";
-import "./IERC721Bridgable.sol";
-import "./IERC1155Bridgable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
+import "./Bridge.sol";
 
-contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC1155HolderUpgradeable {
-	/**
-	 * @notice Stores how many of each token each user has a claim to
-	 * mapping is as follows: user's address => token contract address => amount of token
-	 */
-	mapping (address => mapping (address => uint256)) public fungibleClaims; 
+contract TollBridge is Bridge {
 
 	/**
-	 * @notice Stores how many of each token each user has a claim to
-	 * mapping is as follows: user's address => token contract address => tokenId => has the token or not
+	 * @notice The ERC-20 token used to pay the bridge toll
 	 */
-	mapping (address => mapping (address => mapping (uint256 => bool))) public nonFungibleClaims; 
+	IERC20Upgradeable public tollToken;
 
 	/**
-	 * @notice Stores how many of each token each user has a claim to
-	 * mapping is as follows: user's address => token contract address => tokenId => amount of token
+	 * @notice Stores how much each user can be rebated
+	 * Mapping from address to amount of tokens to rebate
 	 */
-	mapping (address => mapping (address => mapping (uint256 => uint256))) public mixedFungibleClaims; 
+	mapping (address => uint256) public availableRebates;
 
+	// Toll fees
+	uint256 public fungibleFee;
+	uint256 public nonFungibleFee;
+	uint256 public mixedFungibleFee;
 
-
-	function initialize(address _controller) public virtual override initializer {
-		Controllable.initialize(_controller);
-		ERC1155HolderUpgradeable.__ERC1155Holder_init();
+	function initialize(address _controller, address _tollToken) public virtual initializer {
+		tollToken = IERC20Upgradeable(_tollToken);
+		Bridge.initialize(_controller);
 	}
 
 	/**
-	 * @dev Returns the chainId of the network this contract is deployed on
+	 * @dev Pull the an amount of `tollToken` equal to `_fee` from the user's account to pay the bridge toll
 	 */
-	function chainId() public view returns (uint256) {
-		uint256 id;
-		assembly {
-			id := chainid()
-		}
-		return id;
+	modifier requireToll(uint256 _fee) {
+		_;
+
+		// Do this last to avoid possible reentrancy attack
+		tollToken.transferFrom(_msgSender(), address(this), _fee);
+	}
+
+	// Functions to adjust the fees
+	function changeFungibleFee(uint256 _fee) external onlyController {
+		fungibleFee = _fee;
+	}
+
+	function changeNonFungibleFee(uint256 _fee) external onlyController {
+		nonFungibleFee = _fee;
+	}
+
+	function changeMixedFungibleFee(uint256 _fee) external onlyController {
+		mixedFungibleFee = _fee;
 	}
 
 	/**
 	 * @dev Transfers an ERC20 token to a different chain
 	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferFungible` event
 	 */
-	function transferFungible(address token, uint256 amount, uint256 networkId) external virtual override {
-		// require(networkId != chainId(), "Same chainId");
-
+	function transferFungible(address token, uint256 amount, uint256 networkId) external virtual override requireToll(fungibleFee) {
 		IERC20Upgradeable(token).transferFrom(_msgSender(), address(this), amount);
 
 		emit TokenTransferFungible(_msgSender(), token, amount, networkId);
@@ -71,33 +72,37 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 
 		IERC20Upgradeable(token).transfer(_msgSender(), amount);
 
+		_rebateFee(_msgSender());
+
 		emit TokenClaimedFungible(_msgSender(), token, amount);
 	}
 
 	/**
 	 * @dev Used by the bridge network to add a claim to an ERC20 token
 	 */
-	function addClaimFungible(address token, address to, uint256 amount) external virtual override onlyController {
+	function addClaimFungibleWithFeeRebate(address token, address to, uint256 amount, uint256 feeRebate) external virtual onlyController {
 		fungibleClaims[to][token] += amount;
+		availableRebates[to] += feeRebate;
 	}
 
 	/**
-	 * @dev Used by the bridge network to add multiple claims to an ERC20 token
-	 */
-	function addClaimFungibleBatch(address[] calldata tokens, address[] calldata tos, uint256[] calldata amounts) external virtual override onlyController {
+	* @dev Used by the bridge network to add multiple claims to an ERC20 token
+	*/
+	function addClaimFungibleBatchWithFeeRebate(address[] calldata tokens, address[] calldata tos, uint256[] calldata amounts, uint256[] calldata feeRebates) external virtual onlyController {
 		require(tokens.length == tos.length, "Array size mismatch");
 		require(tos.length == amounts.length, "Array size mismatch");
 
 		for(uint256 i = 0; i < tos.length; i++) {
 			fungibleClaims[tos[i]][tokens[i]] += amounts[i];
+			availableRebates[tos[i]] += feeRebates[i];
 		}
 	}
 
 	/**
-	 * @dev Transfers an ERC721 token to a different chain
-	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferNonFungible` event
-	 */
-	function transferNonFungible(address token, uint256 tokenId, uint256 networkId) external virtual override {
+	* @dev Transfers an ERC721 token to a different chain
+	* This function simply moves the caller's tokens to this contract, and emits a `TokenTransferNonFungible` event
+	*/
+	function transferNonFungible(address token, uint256 tokenId, uint256 networkId) external virtual override requireToll(nonFungibleFee) {
 		// require(networkId != chainId(), "Same chainId");
 
 		IERC721Upgradeable(token).transferFrom(_msgSender(), address(this), tokenId);
@@ -125,33 +130,37 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 			IERC721Bridgable(token).transferFrom(address(this), _msgSender(), tokenId);
 		}
 
+		_rebateFee(_msgSender());
+
 		emit TokenClaimedNonFungible(_msgSender(), token, tokenId);
 	}
 
 	/**
 	* @dev Used by the bridge network to add a claim to an ERC721 token
 	*/
-	function addClaimNonFungible(address token, address to, uint256 tokenId) external virtual override onlyController {
+	function addClaimNonFungibleWithFeeRebate(address token, address to, uint256 tokenId, uint256 feeRebate) external virtual onlyController {
 		nonFungibleClaims[to][token][tokenId] = true;
+		availableRebates[to] += feeRebate;
 	}
 
 	/**
 	* @dev Used by the bridge network to add multiple claims to an ERC721 token
-	 */
-	function addClaimNonFungibleBatch(address[] calldata tokens, address[] calldata tos, uint256[] calldata tokenIds) external virtual override onlyController {
+	*/
+	function addClaimNonFungibleBatchWithFeeRebates(address[] calldata tokens, address[] calldata tos, uint256[] calldata tokenIds, uint256[] calldata feeRebates) external virtual onlyController {
 		require(tokens.length == tos.length, "Array size mismatch");
 		require(tos.length == tokenIds.length, "Array size mismatch");
 
 		for(uint256 i = 0; i < tos.length; i++) {
 			nonFungibleClaims[tos[i]][tokens[i]][tokenIds[i]] = true;
+			availableRebates[tos[i]] += feeRebates[i];
 		}
 	}
 
 	/**
 	* @dev Transfers an ERC1155 token to a different chain
 	* This function simply moves the caller's tokens to this contract, and emits a `TokenTransferMixedFungible` event
-	 */
-	function transferMixedFungible(address token, uint256 tokenId, uint256 amount, uint256 networkId) external virtual override {
+	*/
+	function transferMixedFungible(address token, uint256 tokenId, uint256 amount, uint256 networkId) external virtual override requireToll(mixedFungibleFee) {
 		// require(networkId != chainId(), "Same chainId");
 
 		IERC1155Upgradeable(token).safeTransferFrom(_msgSender(), address(this), tokenId, amount, toBytes(0));
@@ -162,8 +171,8 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 	/**
 	* @dev Claim a token that was transfered from another network
 	* Sends the caller the specified token, if they have a valid claim to the token
-	* MUST emit a `TokenClaimedMixedFungible` event on success
-	 */
+		* MUST emit a `TokenClaimedMixedFungible` event on success
+	*/
 	function claimMixedFungible(address token, uint256 tokenId, uint256 amount) external virtual override {
 		require(mixedFungibleClaims[_msgSender()][token][tokenId] >= amount, "Insufficient claimable tokens");
 
@@ -183,31 +192,38 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 			IERC1155Bridgable(token).bridgeMint(_msgSender(), tokenId, amount);
 		}
 
+		_rebateFee(_msgSender());
+
 		emit TokenClaimedMixedFungible(_msgSender(), token, tokenId, amount);
 	}
 
 	/**
 	* @dev Used by the bridge network to add a claim to an ERC1155 token
-	 */
-	function addClaimMixedFungible(address token, address to, uint256 tokenId, uint256 amount) external virtual override onlyController {
+	*/
+	function addClaimMixedFungibleWithFeeRebate(address token, address to, uint256 tokenId, uint256 amount, uint256 feeRebate) external virtual onlyController {
 		mixedFungibleClaims[to][token][tokenId] += amount;
+		availableRebates[to] += feeRebate;
 	}
 
 	/**
-	 * @dev Used by the bridge network to add multiple claims to an ERC1155 token
-	 */
-	function addClaimMixedFungibleBatch(address[] calldata tokens, address[] calldata tos, uint256[] calldata tokenIds, uint256[] calldata amounts) external virtual override onlyController {
+	* @dev Used by the bridge network to add multiple claims to an ERC1155 token
+	*/
+	function addClaimMixedFungibleBatchWithFeeRebate(address[] calldata tokens, address[] calldata tos, uint256[] calldata tokenIds, uint256[] calldata amounts, uint256[] calldata feeRebates) external virtual onlyController {
 		require(tokens.length == tos.length, "Array size mismatch");
 		require(tos.length == tokenIds.length, "Array size mismatch");
 		require(tokenIds.length == amounts.length, "Array size mismatch");
 
 		for(uint256 i = 0; i < tos.length; i++) {
 			mixedFungibleClaims[tos[i]][tokens[i]][tokenIds[i]] += amounts[i];
+			availableRebates[tos[i]] += feeRebates[i];
 		}
 	}
 
-	function toBytes(uint256 x) internal pure returns (bytes memory b) {
-		b = new bytes(32);
-		assembly { mstore(add(b, 32), x) }
+	function _rebateFee(address to) internal {
+		// We do it this way to avoid a possible reentrancy attack
+		uint256 balance = availableRebates[to];
+		availableRebates[to] = 0;
+
+		tollToken.transfer(to, balance);
 	}
 }

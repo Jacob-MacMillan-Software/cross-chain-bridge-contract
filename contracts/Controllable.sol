@@ -8,7 +8,7 @@ contract Controllable is OwnableUpgradeable {
 	address private controller;
 
 	modifier onlyController {
-		require(_msgSender() == controller, "Controllable: only controller");
+		require(_msgSender() == controller || _msgSender() == owner(), "Controllable: only controller");
 		_;
 	}
 
