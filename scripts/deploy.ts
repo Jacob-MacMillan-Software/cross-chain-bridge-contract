@@ -14,12 +14,16 @@ async function main() {
   // await hre.run('compile');
 
   // We get the contract to deploy
-  const Greeter = await ethers.getContractFactory("Greeter");
-  const greeter = await Greeter.deploy("Hello, Hardhat!");
+  const [owner] = await ethers.getSigners();
 
-  await greeter.deployed();
+  const Bridge = await ethers.getContractFactory("Bridge");
+  const bridge = await Bridge.deploy();
+  await bridge.deployed();
 
-  console.log("Greeter deployed to:", greeter.address);
+  console.log("bridge deployed to:", bridge.address, "by", owner.address);
+
+  // Initialzie bridge
+  await bridge.initialize(owner.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
