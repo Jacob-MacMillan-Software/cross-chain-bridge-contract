@@ -73,12 +73,13 @@ describe("Bridge", function () {
   });
 
   describe("ERC721 Bridge", function () {
-    it("Transfer a non-fungilbe token to another network", async function () {
+    it("Transfer a non-fungilbe token to another network (NFT does not exist)", async function () {
       const [owner] = await ethers.getSigners();
 
       const mockERC721 = await deployMockContract(owner, IERC721.abi);
 
       await mockERC721.mock.transferFrom.returns();
+      await mockERC721.mock.ownerOf.withArgs(1).reverts();
 
       const Bridge = await ethers.getContractFactory("Bridge");
       const bridge = await Bridge.deploy();

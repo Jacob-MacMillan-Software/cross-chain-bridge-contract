@@ -106,24 +106,36 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 	}
 
 	/**
-	* @dev Claim a token that was transfered from another network
-	* Sends the caller the specified token, if they have a valid claim to the token
-		* MUST emit a `TokenClaimedFungible` event on success
-	*/
+	 * @dev Claim a token that was transfered from another network
+	 * Sends the caller the specified token, if they have a valid claim to the token
+	 * MUST emit a `TokenClaimedFungible` event on success
+	 */
 	function claimNonFungible(address token, uint256 tokenId) external virtual override {
 		require(nonFungibleClaims[_msgSender()][token][tokenId], "Insufficient claimable tokens");
 
 		nonFungibleClaims[_msgSender()][token][tokenId] = false;
 
+		address tokenOwner;
+		// The try-catch block is because `ownerOf` can (and I think is supposed to) revert if the item doesn't yet exist on this chain
+		try IERC721Bridgable(token).ownerOf(tokenId) returns (address _owner) {
+			tokenOwner = _owner;
+		} catch {
+			tokenOwner = address(0);
+		}
+
 		// Check if the token needs to be minted
 		// If it does, attempt to mint it (will fail if this contract has no such permission, or the ERC721 contract doesn't support bridgeMint)
 		// If the token exists, and the owner is this contract, it will be sent like normal
 		// Otherwise this contract will revert
-		if(IERC721Bridgable(token).ownerOf(tokenId) == address(0)) {
+
+
+		if(tokenOwner == address(0)) {
 			IERC721Bridgable(token).bridgeMint(_msgSender(), tokenId);
 		} else {
+			// This will revert if the bridge does not own the token; this is intended
 			IERC721Bridgable(token).transferFrom(address(this), _msgSender(), tokenId);
 		}
+
 
 		emit TokenClaimedNonFungible(_msgSender(), token, tokenId);
 	}
@@ -137,7 +149,7 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 
 	/**
 	* @dev Used by the bridge network to add multiple claims to an ERC721 token
-	 */
+	*/
 	function addClaimNonFungibleBatch(address[] calldata tokens, address[] calldata tos, uint256[] calldata tokenIds) external virtual override onlyController {
 		require(tokens.length == tos.length, "Array size mismatch");
 		require(tos.length == tokenIds.length, "Array size mismatch");
@@ -150,7 +162,7 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 	/**
 	* @dev Transfers an ERC1155 token to a different chain
 	* This function simply moves the caller's tokens to this contract, and emits a `TokenTransferMixedFungible` event
-	 */
+	*/
 	function transferMixedFungible(address token, uint256 tokenId, uint256 amount, uint256 networkId) external virtual override {
 		// require(networkId != chainId(), "Same chainId");
 
@@ -162,8 +174,8 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 	/**
 	* @dev Claim a token that was transfered from another network
 	* Sends the caller the specified token, if they have a valid claim to the token
-	* MUST emit a `TokenClaimedMixedFungible` event on success
-	 */
+		* MUST emit a `TokenClaimedMixedFungible` event on success
+	*/
 	function claimMixedFungible(address token, uint256 tokenId, uint256 amount) external virtual override {
 		require(mixedFungibleClaims[_msgSender()][token][tokenId] >= amount, "Insufficient claimable tokens");
 
@@ -188,14 +200,14 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 
 	/**
 	* @dev Used by the bridge network to add a claim to an ERC1155 token
-	 */
+	*/
 	function addClaimMixedFungible(address token, address to, uint256 tokenId, uint256 amount) external virtual override onlyController {
 		mixedFungibleClaims[to][token][tokenId] += amount;
 	}
 
 	/**
-	 * @dev Used by the bridge network to add multiple claims to an ERC1155 token
-	 */
+	* @dev Used by the bridge network to add multiple claims to an ERC1155 token
+	*/
 	function addClaimMixedFungibleBatch(address[] calldata tokens, address[] calldata tos, uint256[] calldata tokenIds, uint256[] calldata amounts) external virtual override onlyController {
 		require(tokens.length == tos.length, "Array size mismatch");
 		require(tos.length == tokenIds.length, "Array size mismatch");
