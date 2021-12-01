@@ -13,14 +13,14 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  // We get the contract to deploy
-  const [owner] = await ethers.getSigners();
+  const { PROXY_ADDRESS } = process.env;
 
+  // We get the contract to deploy
   const Bridge = await ethers.getContractFactory("Bridge");
-  const bridge = await upgrades.deployProxy(Bridge, [owner.address]);
+  const bridge = await upgrades.upgradeProxy(PROXY_ADDRESS, Bridge);
   await bridge.deployed();
 
-  console.log("bridge deployed to:", bridge.address, "by", owner.address);
+  console.log("bridge upgraded. Proxy address:", bridge.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
