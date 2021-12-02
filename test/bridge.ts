@@ -16,7 +16,7 @@ describe("Bridge", function () {
       await mockERC20.mock.transferFrom.returns(true);
       await mockERC20.mock.transfer.returns(true);
 
-      const Bridge = await ethers.getContractFactory("Bridge");
+      const Bridge = await ethers.getContractFactory("BridgeDeployable");
       const bridge = await Bridge.deploy();
       await bridge.deployed();
 
@@ -49,7 +49,7 @@ describe("Bridge", function () {
 
       await mockERC20.mock.transfer.returns(true);
 
-      const Bridge = await ethers.getContractFactory("Bridge");
+      const Bridge = await ethers.getContractFactory("BridgeDeployable");
       const bridge = await Bridge.deploy();
       await bridge.deployed();
 
@@ -79,9 +79,8 @@ describe("Bridge", function () {
       const mockERC721 = await deployMockContract(owner, IERC721.abi);
 
       await mockERC721.mock.transferFrom.returns();
-      await mockERC721.mock.ownerOf.withArgs(1).reverts();
 
-      const Bridge = await ethers.getContractFactory("Bridge");
+      const Bridge = await ethers.getContractFactory("BridgeDeployable");
       const bridge = await Bridge.deploy();
       await bridge.deployed();
 
@@ -113,8 +112,9 @@ describe("Bridge", function () {
       const mockERC721 = await deployMockContract(owner, IERC721.abi);
 
       await mockERC721.mock.transferFrom.returns();
+      await mockERC721.mock.ownerOf.withArgs(1).reverts();
 
-      const Bridge = await ethers.getContractFactory("Bridge");
+      const Bridge = await ethers.getContractFactory("BridgeDeployable");
       const bridge = await Bridge.deploy();
       await bridge.deployed();
 
@@ -145,7 +145,7 @@ describe("Bridge", function () {
 
       await mockERC1155.mock.safeTransferFrom.returns();
 
-      const Bridge = await ethers.getContractFactory("Bridge");
+      const Bridge = await ethers.getContractFactory("BridgeDeployable");
       const bridge = await Bridge.deploy();
       await bridge.deployed();
 
@@ -180,7 +180,7 @@ describe("Bridge", function () {
 
       await mockERC1155.mock.safeTransferFrom.returns();
 
-      const Bridge = await ethers.getContractFactory("Bridge");
+      const Bridge = await ethers.getContractFactory("BridgeDeployable");
       const bridge = await Bridge.deploy();
       await bridge.deployed();
 

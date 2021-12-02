@@ -30,8 +30,8 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 
 
 
-	function initialize(address _controller) public virtual override initializer {
-		Controllable.initialize(_controller);
+	function __init_bridge(address _controller) internal virtual initializer {
+		Controllable.__init_controller(_controller);
 		ERC1155HolderUpgradeable.__ERC1155Holder_init();
 	}
 
