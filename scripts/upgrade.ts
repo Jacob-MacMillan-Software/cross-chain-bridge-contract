@@ -16,7 +16,7 @@ async function main() {
   const { PROXY_ADDRESS } = process.env;
 
   // We get the contract to deploy
-  const Bridge = await ethers.getContractFactory("Bridge");
+  const Bridge = await ethers.getContractFactory("TollBridge");
   const bridge = await upgrades.upgradeProxy(PROXY_ADDRESS, Bridge);
   await bridge.deployed();
 
