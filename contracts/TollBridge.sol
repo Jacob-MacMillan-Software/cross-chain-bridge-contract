@@ -275,8 +275,10 @@ contract TollBridge is Bridge {
       // We do it this way to avoid a possible reentrancy attack
       uint256 balance = availableRebates[to];
       availableRebates[to] = 0;
-
-      tollToken.transfer(to, balance);
+		
+		if(balance > 0) {
+			tollToken.transfer(to, balance);
+		}
    }
 
    /**
