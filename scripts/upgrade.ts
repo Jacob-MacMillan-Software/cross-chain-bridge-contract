@@ -17,6 +17,8 @@ async function main() {
 
   // We get the contract to deploy
   const Bridge = await ethers.getContractFactory("TollBridge");
+  
+  // @ts-ignore
   const bridge = await upgrades.upgradeProxy(PROXY_ADDRESS, Bridge);
   await bridge.deployed();
 
