@@ -11,12 +11,6 @@ contract TollBridge is Bridge {
 	 */
 	IERC20Upgradeable public tollToken;
 
-	/**
-	 * @notice Stores how much each user can be rebated
-	 * Mapping from address to amount of tokens to rebate
-	 */
-	mapping (address => uint256) public availableRebates;
-
 	// Toll fees
 	uint256 public fungibleFee;
 	uint256 public nonFungibleFee;
@@ -55,37 +49,6 @@ contract TollBridge is Bridge {
       emit TokenTransferFungible(_msgSender(), token, amount, networkId);
    }
 
-   /**
-    * @dev Claim a token that was transfered from another network
-    * Sends the caller the specified token, if they have a valid claim to the token
-    * MUST emit a `TokenClaimedFungible` event on success
-    */
-   function claimFungible(address token, uint256 amount) external virtual override {
-      require(fungibleClaims[_msgSender()][token] >= amount, "Insufficient claimable tokens");
-      require(IERC20Upgradeable(token).balanceOf(address(this)) >= amount, "Insufficient liquidity");
-
-   fungibleClaims[_msgSender()][token] -= amount;
-
-   IERC20Upgradeable(token).transfer(_msgSender(), amount);
-
-   _rebateFee(_msgSender());
-
-   emit TokenClaimedFungible(_msgSender(), token, amount);
-      }
-
-      /**
-       * @dev Used by the bridge network to add a claim to an ERC20 token
-       */
-   function addClaimFungibleWithFeeRebate(
-         address token,
-         address to,
-         uint256 amount,
-         uint256 feeRebate
-         ) external virtual onlyController {
-      fungibleClaims[to][token] += amount;
-      availableRebates[to] += feeRebate;
-   }
-
 	/**
 	 * @dev Used by bridge network to transfer the item directly to user without need for manual claiming
 	 */
@@ -99,28 +62,9 @@ contract TollBridge is Bridge {
 
 		IERC20Upgradeable(token).transfer(to, amount);
 		
-		availableRebates[to] += feeRebate;
-		_rebateFee(to);
+		_rebateFee(to, feeRebate);
 
 		emit TokenClaimedFungible(to, token, amount);
-	}
-
-	/**
-	 * @dev Used by the bridge network to add multiple claims to an ERC20 token
-	 */
-	function addClaimFungibleBatchWithFeeRebate(
-		address[] calldata tokens,
-		address[] calldata tos,
-		uint256[] calldata amounts,
-		uint256[] calldata feeRebates
-		) external virtual onlyController {
-		require(tokens.length == tos.length, "Array size mismatch");
-		require(tos.length == amounts.length, "Array size mismatch");
-
-		for(uint256 i = 0; i < tos.length; i++) {
-			fungibleClaims[tos[i]][tokens[i]] += amounts[i];
-			availableRebates[tos[i]] += feeRebates[i];
-		}
 	}
 
 	/**
@@ -135,71 +79,6 @@ contract TollBridge is Bridge {
 		_payToll(nonFungibleFee);
 
 		emit TokenTransferNonFungible(_msgSender(), token, tokenId, networkId);
-	}
-
-	/**
-	* @dev Claim a token that was transfered from another network
-	* Sends the caller the specified token, if they have a valid claim to the token
-		* MUST emit a `TokenClaimedFungible` event on success
-	*/
-	function claimNonFungible(address token, uint256 tokenId) external virtual override {
-		require(nonFungibleClaims[_msgSender()][token][tokenId], "Insufficient claimable tokens");
-
-		nonFungibleClaims[_msgSender()][token][tokenId] = false;
-
-		address tokenOwner;
-		// The try-catch block is because `ownerOf` can (and I think is supposed to) revert if the item doesn't yet exist on this chain
-		try IERC721Bridgable(token).ownerOf(tokenId) returns (address _owner) {
-			tokenOwner = _owner;
-		} catch {
-			tokenOwner = address(0);
-		}
-
-		// Check if the token needs to be minted
-		// If it does, attempt to mint it (will fail if this contract has no such permission, or the ERC721 contract doesn't support bridgeMint)
-		// If the token exists, and the owner is this contract, it will be sent like normal
-		// Otherwise this contract will revert
-		if(tokenOwner == address(0)) {
-			IERC721Bridgable(token).bridgeMint(_msgSender(), tokenId);
-		} else {
-			// This will revert if the bridge does not own the token; this is intended
-			IERC721Bridgable(token).transferFrom(address(this), _msgSender(), tokenId);
-		}
-
-		_rebateFee(_msgSender());
-
-		emit TokenClaimedNonFungible(_msgSender(), token, tokenId);
-	}
-
-	/**
-	* @dev Used by the bridge network to add a claim to an ERC721 token
-	*/
-	function addClaimNonFungibleWithFeeRebate(
-		address token,
-		address to,
-		uint256 tokenId,
-		uint256 feeRebate
-	) external virtual onlyController {
-		nonFungibleClaims[to][token][tokenId] = true;
-		availableRebates[to] += feeRebate;
-	}
-
-	/**
-	* @dev Used by the bridge network to add multiple claims to an ERC721 token
-	*/
-	function addClaimNonFungibleBatchWithFeeRebates(
-		address[] calldata tokens,
-		address[] calldata tos,
-		uint256[] calldata tokenIds,
-		uint256[] calldata feeRebates
-	) external virtual onlyController {
-		require(tokens.length == tos.length, "Array size mismatch");
-		require(tos.length == tokenIds.length, "Array size mismatch");
-
-		for(uint256 i = 0; i < tos.length; i++) {
-			nonFungibleClaims[tos[i]][tokens[i]][tokenIds[i]] = true;
-			availableRebates[tos[i]] += feeRebates[i];
-		}
 	}
 
 	/**
@@ -230,8 +109,7 @@ contract TollBridge is Bridge {
 			IERC721Bridgable(token).transferFrom(address(this), to, tokenId);
 		}
 	
-		availableRebates[to] += feeRebate;
-		_rebateFee(to);
+		_rebateFee(to, feeRebate);
 
 		emit TokenClaimedNonFungible(to, token, tokenId);
 	}
@@ -253,71 +131,6 @@ contract TollBridge is Bridge {
 		_payToll(mixedFungibleFee);
 
 		emit TokenTransferMixedFungible(_msgSender(), token, tokenId, amount, networkId);
-	}
-
-	/**
-	* @dev Claim a token that was transfered from another network
-	* Sends the caller the specified token, if they have a valid claim to the token
-		* MUST emit a `TokenClaimedMixedFungible` event on success
-	*/
-	function claimMixedFungible(address token, uint256 tokenId, uint256 amount) external virtual override {
-		require(mixedFungibleClaims[_msgSender()][token][tokenId] >= amount, "Insufficient claimable tokens");
-
-		mixedFungibleClaims[_msgSender()][token][tokenId] -= amount;
-
-		// Get balance of tokens that this contract owns, mint the rest
-		uint256 balance = IERC1155Bridgable(token).balanceOf(address(this), tokenId);
-		uint256 balanceToMint = 0;
-		uint256 balanceToTransfer = amount;
-
-		if(balance < amount) {
-			balanceToMint = amount - balance;
-			balanceToTransfer = balance;
-		}
-
-		IERC1155Bridgable(token).safeTransferFrom(address(this), _msgSender(), tokenId, balanceToTransfer, toBytes(0));
-
-		if(balanceToMint > 0) {
-			IERC1155Bridgable(token).bridgeMint(_msgSender(), tokenId, balanceToMint);
-		}
-
-		_rebateFee(_msgSender());
-
-		emit TokenClaimedMixedFungible(_msgSender(), token, tokenId, amount);
-	}
-
-	/**
-	* @dev Used by the bridge network to add a claim to an ERC1155 token
-	*/
-	function addClaimMixedFungibleWithFeeRebate(
-		address token,
-		address to,
-		uint256 tokenId,
-		uint256 amount,
-		uint256 feeRebate
-	) external virtual onlyController {
-		mixedFungibleClaims[to][token][tokenId] += amount;
-		availableRebates[to] += feeRebate;
-	}
-
-	/**
-	* @dev Used by the bridge network to add multiple claims to an ERC1155 token
-	*/
-	function addClaimMixedFungibleBatchWithFeeRebate(
-		address[] calldata tokens,
-		address[] calldata tos,
-		uint256[] calldata tokenIds,
-		uint256[] calldata amounts,
-		uint256[] calldata feeRebates
-	) external virtual onlyController {
-		require(tokens.length == tos.length, "Array size mismatch");
-		require(tos.length == tokenIds.length, "Array size mismatch");
-		require(tokenIds.length == amounts.length, "Array size mismatch");
-
-		for(uint256 i = 0; i < tos.length; i++) {
-			mixedFungibleClaims[tos[i]][tokens[i]][tokenIds[i]] += amounts[i];
-			availableRebates[tos[i]] += feeRebates[i];
-		}
 	}
 
 	/**
@@ -346,8 +159,7 @@ contract TollBridge is Bridge {
 			IERC1155Bridgable(token).bridgeMint(to, tokenId, balanceToMint);
 		}
 
-		availableRebates[to] += feeRebate;
-		_rebateFee(to);
+		_rebateFee(to, feeRebate);
 
 		emit TokenClaimedMixedFungible(to, token, tokenId, amount);
 	}
@@ -358,11 +170,7 @@ contract TollBridge is Bridge {
 		tollToken.transfer(_msgSender(), amount);
 	}
 
-	function _rebateFee(address to) internal {
-		// We do it this way to avoid a possible reentrancy attack
-		uint256 balance = availableRebates[to];
-		availableRebates[to] = 0;
-
+	function _rebateFee(address to, uint256 balance) internal {
 		if(balance > 0) {
 			tollToken.transfer(to, balance);
 		}

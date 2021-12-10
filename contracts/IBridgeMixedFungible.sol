@@ -15,21 +15,9 @@ interface IBridgeMixedFungible is IBridge, IERC1155ReceiverUpgradeable {
 	function transferMixedFungible(address token, uint256 tokenId, uint256 amount, uint256 networkId) external;
 
 	/**
-	 * @dev Claim a token that was transfered from another network
-	 * Sends the caller the specified token, if they have a valid claim to the token
-	 * MUST emit a `TokenClaimedMixedFungible` event on success
+	 * @dev Used by the bridge relay to 'transfer' a user's item to the chain
 	 */
-	function claimMixedFungible(address token, uint256 tokenId, uint256 amount) external;
-
-	/**
-	 * @dev Used by the bridge network to add a claim to an ERC1155 token
-	 */
-	function addClaimMixedFungible(address token, address to, uint256 tokenId, uint256 amount) external;
-
-	/**
-	 * @dev Used by the bridge network to add multiple claims to an ERC1155 token
-	 */
-	function addClaimMixedFungibleBatch(address[] calldata tokens, address[] calldata tos, uint256[] calldata tokenIds, uint256[] calldata amounts) external;
+	function bridgeClaimMixedFungible(address token, address to, uint256 tokenId, uint256 amount) external;
 
 	event TokenTransferMixedFungible(address indexed from, address indexed token, uint256 tokenId, uint256 amount, uint256 networkId);
 	event TokenClaimedMixedFungible(address indexed from, address indexed token, uint256 tokenId, uint256 amount);

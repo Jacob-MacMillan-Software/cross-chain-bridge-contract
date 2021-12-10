@@ -28,8 +28,6 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 	 */
 	mapping (address => mapping (address => mapping (uint256 => uint256))) public mixedFungibleClaims; 
 
-
-
 	function __init_bridge(address _controller) internal virtual initializer {
 		Controllable.__init_controller(_controller);
 		ERC1155HolderUpgradeable.__ERC1155Holder_init();
@@ -38,13 +36,13 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 	/**
 	 * @dev Returns the chainId of the network this contract is deployed on
 	 */
-	function chainId() public view returns (uint256) {
+	/*function chainId() public view returns (uint256) {
 		uint256 id;
 		assembly {
 			id := chainid()
 		}
 		return id;
-	}
+	}*/
 
 	/**
 	 * @dev Transfers an ERC20 token to a different chain
@@ -59,38 +57,18 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 	}
 
 	/**
-	 * @dev Claim a token that was transfered from another network
-	 * Sends the caller the specified token, if they have a valid claim to the token
-	 * MUST emit a `TokenClaimedFungible` event on success
+	 * @dev Used by bridge network to transfer the item directly to user without need for manual claiming
 	 */
-	function claimFungible(address token, uint256 amount) external virtual override {
-		require(fungibleClaims[_msgSender()][token] >= amount, "Insufficient claimable tokens");
+	function bridgeClaimFungible(
+		address token,
+		address to,
+		uint256 amount
+	) external virtual override onlyController {
 		require(IERC20Upgradeable(token).balanceOf(address(this)) >= amount, "Insufficient liquidity");
 
-		fungibleClaims[_msgSender()][token] -= amount;
+		IERC20Upgradeable(token).transfer(to, amount);
 
-		IERC20Upgradeable(token).transfer(_msgSender(), amount);
-
-		emit TokenClaimedFungible(_msgSender(), token, amount);
-	}
-
-	/**
-	 * @dev Used by the bridge network to add a claim to an ERC20 token
-	 */
-	function addClaimFungible(address token, address to, uint256 amount) external virtual override onlyController {
-		fungibleClaims[to][token] += amount;
-	}
-
-	/**
-	 * @dev Used by the bridge network to add multiple claims to an ERC20 token
-	 */
-	function addClaimFungibleBatch(address[] calldata tokens, address[] calldata tos, uint256[] calldata amounts) external virtual override onlyController {
-		require(tokens.length == tos.length, "Array size mismatch");
-		require(tos.length == amounts.length, "Array size mismatch");
-
-		for(uint256 i = 0; i < tos.length; i++) {
-			fungibleClaims[tos[i]][tokens[i]] += amounts[i];
-		}
+		emit TokenClaimedFungible(to, token, amount);
 	}
 
 	/**
@@ -106,15 +84,13 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 	}
 
 	/**
-	 * @dev Claim a token that was transfered from another network
-	 * Sends the caller the specified token, if they have a valid claim to the token
-	 * MUST emit a `TokenClaimedFungible` event on success
+	 * @dev Used by bridge network to transfer the item directly to user without need for manual claiming
 	 */
-	function claimNonFungible(address token, uint256 tokenId) external virtual override {
-		require(nonFungibleClaims[_msgSender()][token][tokenId], "Insufficient claimable tokens");
-
-		nonFungibleClaims[_msgSender()][token][tokenId] = false;
-
+	function bridgeClaimNonFungible(
+		address token,
+		address to,
+		uint256 tokenId
+	) external virtual override onlyController {
 		address tokenOwner;
 		// The try-catch block is because `ownerOf` can (and I think is supposed to) revert if the item doesn't yet exist on this chain
 		try IERC721Bridgable(token).ownerOf(tokenId) returns (address _owner) {
@@ -127,37 +103,16 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 		// If it does, attempt to mint it (will fail if this contract has no such permission, or the ERC721 contract doesn't support bridgeMint)
 		// If the token exists, and the owner is this contract, it will be sent like normal
 		// Otherwise this contract will revert
-
-
 		if(tokenOwner == address(0)) {
 			IERC721Bridgable(token).bridgeMint(_msgSender(), tokenId);
 		} else {
 			// This will revert if the bridge does not own the token; this is intended
-			IERC721Bridgable(token).transferFrom(address(this), _msgSender(), tokenId);
+			IERC721Bridgable(token).transferFrom(address(this), to, tokenId);
 		}
 
-
-		emit TokenClaimedNonFungible(_msgSender(), token, tokenId);
+		emit TokenClaimedNonFungible(to, token, tokenId);
 	}
 
-	/**
-	* @dev Used by the bridge network to add a claim to an ERC721 token
-	*/
-	function addClaimNonFungible(address token, address to, uint256 tokenId) external virtual override onlyController {
-		nonFungibleClaims[to][token][tokenId] = true;
-	}
-
-	/**
-	* @dev Used by the bridge network to add multiple claims to an ERC721 token
-	*/
-	function addClaimNonFungibleBatch(address[] calldata tokens, address[] calldata tos, uint256[] calldata tokenIds) external virtual override onlyController {
-		require(tokens.length == tos.length, "Array size mismatch");
-		require(tos.length == tokenIds.length, "Array size mismatch");
-
-		for(uint256 i = 0; i < tos.length; i++) {
-			nonFungibleClaims[tos[i]][tokens[i]][tokenIds[i]] = true;
-		}
-	}
 
 	/**
 	* @dev Transfers an ERC1155 token to a different chain
@@ -172,50 +127,31 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 	}
 
 	/**
-	* @dev Claim a token that was transfered from another network
-	* Sends the caller the specified token, if they have a valid claim to the token
-		* MUST emit a `TokenClaimedMixedFungible` event on success
+	* @dev Used by bridge network to transfer the item directly to user without need for manual claiming
 	*/
-	function claimMixedFungible(address token, uint256 tokenId, uint256 amount) external virtual override {
-		require(mixedFungibleClaims[_msgSender()][token][tokenId] >= amount, "Insufficient claimable tokens");
-
-		mixedFungibleClaims[_msgSender()][token][tokenId] -= amount;
-
+	function bridgeClaimMixedFungible(
+		address token,
+		address to,
+		uint256 tokenId,
+		uint256 amount
+	) external virtual override onlyController {
 		// Get balance of tokens that this contract owns, mint the rest
 		uint256 balance = IERC1155Bridgable(token).balanceOf(address(this), tokenId);
 		uint256 balanceToMint = 0;
+		uint256 balanceToTransfer = amount;
 
 		if(balance < amount) {
 			balanceToMint = amount - balance;
+			balanceToTransfer = balance;
 		}
 
-		IERC1155Bridgable(token).safeTransferFrom(address(this), _msgSender(), tokenId, amount, toBytes(0));
+		IERC1155Bridgable(token).safeTransferFrom(address(this), to, tokenId, balanceToTransfer, toBytes(0));
 
 		if(balanceToMint > 0) {
-			IERC1155Bridgable(token).bridgeMint(_msgSender(), tokenId, amount);
+			IERC1155Bridgable(token).bridgeMint(to, tokenId, balanceToMint);
 		}
 
-		emit TokenClaimedMixedFungible(_msgSender(), token, tokenId, amount);
-	}
-
-	/**
-	* @dev Used by the bridge network to add a claim to an ERC1155 token
-	*/
-	function addClaimMixedFungible(address token, address to, uint256 tokenId, uint256 amount) external virtual override onlyController {
-		mixedFungibleClaims[to][token][tokenId] += amount;
-	}
-
-	/**
-	* @dev Used by the bridge network to add multiple claims to an ERC1155 token
-	*/
-	function addClaimMixedFungibleBatch(address[] calldata tokens, address[] calldata tos, uint256[] calldata tokenIds, uint256[] calldata amounts) external virtual override onlyController {
-		require(tokens.length == tos.length, "Array size mismatch");
-		require(tos.length == tokenIds.length, "Array size mismatch");
-		require(tokenIds.length == amounts.length, "Array size mismatch");
-
-		for(uint256 i = 0; i < tos.length; i++) {
-			mixedFungibleClaims[tos[i]][tokens[i]][tokenIds[i]] += amounts[i];
-		}
+		emit TokenClaimedMixedFungible(to, token, tokenId, amount);
 	}
 
 	function toBytes(uint256 x) internal pure returns (bytes memory b) {

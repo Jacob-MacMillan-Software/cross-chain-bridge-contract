@@ -60,36 +60,6 @@ describe("Toll Bridge", function () {
     });
 
     it("Claim a fungible token that was transfered with no fee rebate", async function () {
-      const [owner] = await ethers.getSigners();
-
-      const mockERC20 = await deployMockContract(owner, IERC20.abi);
-
-      await mockERC20.mock.transfer.returns(true);
-
-      const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        tollToken.address,
-      ]);
-      await bridge.deployed();
-
-      await mockERC20.mock.balanceOf.withArgs(bridge.address).returns(100);
-
-      await bridge.addClaimFungible(mockERC20.address, owner.address, 100);
-
-      // Claim token
-      const claimTx = await bridge.claimFungible(mockERC20.address, 100);
-      const tx = await claimTx.wait();
-
-      // @ts-ignore
-      await tx.events?.forEach((e) => {
-        expect(e.args?.from).to.equal(owner.address);
-        expect(e.args?.token).to.equal(mockERC20.address);
-        expect(parseInt(e.args?.amount)).to.equal(100);
-      });
-    });
-
-    it("Bridge Claim a fungible token that was transfered with no fee rebate", async function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const mockERC20 = await deployMockContract(owner, IERC20.abi);
@@ -176,17 +146,15 @@ describe("Toll Bridge", function () {
 
       await mockERC20.mock.balanceOf.withArgs(bridge.address).returns(100);
 
-      await bridge.addClaimFungibleWithFeeRebate(
-        mockERC20.address,
-        owner.address,
-        100,
-        1000
-      );
-
       // Claim token
       let pass: boolean = false;
       try {
-        await bridge.claimFungible(mockERC20.address, 100);
+        await bridge.bridgeClaimFungibleWithFeeRebate(
+          mockERC20.address,
+          owner.address,
+          100,
+          1000
+        );
       } /* @ts-ignore */ catch (err) {
         expect(String(err).includes("Test Working")).to.equal(true);
         pass = true;
@@ -250,10 +218,12 @@ describe("Toll Bridge", function () {
 
       await mockERC721.mock.ownerOf.withArgs(1).returns(bridge.address);
 
-      await bridge.addClaimNonFungible(mockERC721.address, owner.address, 1);
-
       // Claim token
-      const claimTx = await bridge.claimNonFungible(mockERC721.address, 1);
+      const claimTx = await bridge.bridgeClaimNonFungible(
+        mockERC721.address,
+        owner.address,
+        1
+      );
       const tx = await claimTx.wait();
 
       // @ts-ignore
@@ -320,17 +290,15 @@ describe("Toll Bridge", function () {
 
       await mockERC721.mock.ownerOf.withArgs(1).returns(bridge.address);
 
-      await bridge.addClaimNonFungibleWithFeeRebate(
-        mockERC721.address,
-        owner.address,
-        1,
-        100
-      );
-
       let pass: boolean = false;
       // Transfer a token to network 2
       try {
-        await bridge.claimNonFungible(mockERC721.address, 1);
+        await bridge.bridgeClaimNonFungibleWithFeeRebate(
+          mockERC721.address,
+          owner.address,
+          1,
+          100
+        );
       } /* @ts-ignore */ catch (err) {
         expect(String(err).includes("Test Working")).to.equal(true);
         pass = true;
@@ -339,7 +307,7 @@ describe("Toll Bridge", function () {
       expect(pass).to.equal(true);
     });
 
-    it("Bridge Claim a non-fungible token that was transfered and the NFT exist and is owned by bridge contract with no fee rebate", async function () {
+    it("Claim a non-fungible token that was transfered and the NFT exist and is owned by bridge contract with no fee rebate", async function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const mockERC721 = await deployMockContract(owner, IERC721.abi);
@@ -413,46 +381,6 @@ describe("Toll Bridge", function () {
       });
     });
 
-    it("Claim a mixed fungible token that was transfered with no fee rebate", async function () {
-      const [owner] = await ethers.getSigners();
-
-      const mockERC1155 = await deployMockContract(owner, IERC1155.abi);
-
-      await mockERC1155.mock.safeTransferFrom.returns();
-
-      const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        tollToken.address,
-      ]);
-      await bridge.deployed();
-
-      await mockERC1155.mock.balanceOf.withArgs(bridge.address, 1).returns(100);
-
-      await bridge.addClaimMixedFungible(
-        mockERC1155.address,
-        owner.address,
-        1,
-        100
-      );
-
-      // Claim token
-      const claimTx = await bridge.claimMixedFungible(
-        mockERC1155.address,
-        1,
-        100
-      );
-      const tx = await claimTx.wait();
-
-      // @ts-ignore
-      await tx.events?.forEach((e) => {
-        expect(e.args?.from).to.equal(owner.address);
-        expect(e.args?.token).to.equal(mockERC1155.address);
-        expect(parseInt(e.args?.tokenId)).to.equal(1);
-        expect(parseInt(e.args?.amount)).to.equal(100);
-      });
-    });
-
     it("Transfer a mixed fungilbe token to another network with fee", async function () {
       const [owner] = await ethers.getSigners();
 
@@ -504,14 +432,6 @@ describe("Toll Bridge", function () {
 
       await mockERC1155.mock.balanceOf.withArgs(bridge.address, 1).returns(100);
 
-      await bridge.addClaimMixedFungibleWithFeeRebate(
-        mockERC1155.address,
-        owner.address,
-        1,
-        100,
-        100
-      );
-
       // We'll use this to verify the fee is being taken
       await tollToken.mock.transfer
         .withArgs(owner.address, 100)
@@ -520,7 +440,13 @@ describe("Toll Bridge", function () {
       // Claim token
       let pass: boolean = false;
       try {
-        await bridge.claimMixedFungible(mockERC1155.address, 1, 100);
+        await bridge.bridgeClaimMixedFungibleWithFeeRebate(
+          mockERC1155.address,
+          owner.address,
+          1,
+          100,
+          100
+        );
       } /* @ts-ignore */ catch (err) {
         expect(String(err).includes("Test Working")).to.equal(true);
         pass = true;
@@ -529,7 +455,7 @@ describe("Toll Bridge", function () {
       expect(pass).to.equal(true);
     });
 
-    it("Bridge Claim a mixed fungible token that was transfered with no fee rebate", async function () {
+    it("Claim a mixed fungible token that was transfered with no fee rebate", async function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const mockERC1155 = await deployMockContract(owner, IERC1155.abi);

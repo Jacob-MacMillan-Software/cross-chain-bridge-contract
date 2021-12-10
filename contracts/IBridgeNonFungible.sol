@@ -14,21 +14,9 @@ interface IBridgeNonFungible is IBridge {
 	function transferNonFungible(address token, uint256 tokenId, uint256 networkId) external;
 
 	/**
-	 * @dev Claim a token that was transfered from another network
-	 * Sends the caller the specified token, if they have a valid claim to the token
-	 * MUST emit a `TokenClaimedFungible` event on success
+	 * @dev Used by the bridge relay to 'transfer' a user's item to the chain
 	 */
-	function claimNonFungible(address token, uint256 tokenId) external;
-
-	/**
-	 * @dev Used by the bridge network to add a claim to an ERC721 token
-	 */
-	function addClaimNonFungible(address token, address to, uint256 tokenId) external;
-
-	/**
-	 * @dev Used by the bridge network to add multiple claims to an ERC721 token
-	 */
-	function addClaimNonFungibleBatch(address[] calldata tokens, address[] calldata tos, uint256[] calldata tokenIds) external;
+	function bridgeClaimNonFungible(address token, address to, uint256 tokenId) external;
 
 	event TokenTransferNonFungible(address indexed from, address indexed token, uint256 tokenId, uint256 networkId);
 	event TokenClaimedNonFungible(address indexed from, address indexed token, uint256 tokenId);

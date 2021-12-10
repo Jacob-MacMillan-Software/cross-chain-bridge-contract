@@ -58,10 +58,12 @@ describe("Bridge", function () {
 
       await mockERC20.mock.balanceOf.withArgs(bridge.address).returns(100);
 
-      await bridge.addClaimFungible(mockERC20.address, owner.address, 100);
-
       // Claim token
-      const claimTx = await bridge.claimFungible(mockERC20.address, 100);
+      const claimTx = await bridge.bridgeClaimFungible(
+        mockERC20.address,
+        owner.address,
+        100
+      );
       const tx = await claimTx.wait();
 
       await tx.events?.forEach((e) => {
@@ -123,10 +125,12 @@ describe("Bridge", function () {
 
       await mockERC721.mock.ownerOf.withArgs(1).returns(bridge.address);
 
-      await bridge.addClaimNonFungible(mockERC721.address, owner.address, 1);
-
       // Claim token
-      const claimTx = await bridge.claimNonFungible(mockERC721.address, 1);
+      const claimTx = await bridge.bridgeClaimNonFungible(
+        mockERC721.address,
+        owner.address,
+        1
+      );
       const tx = await claimTx.wait();
 
       await tx.events?.forEach((e) => {
@@ -189,16 +193,10 @@ describe("Bridge", function () {
 
       await mockERC1155.mock.balanceOf.withArgs(bridge.address, 1).returns(100);
 
-      await bridge.addClaimMixedFungible(
+      // Claim token
+      const claimTx = await bridge.bridgeClaimMixedFungible(
         mockERC1155.address,
         owner.address,
-        1,
-        100
-      );
-
-      // Claim token
-      const claimTx = await bridge.claimMixedFungible(
-        mockERC1155.address,
         1,
         100
       );
