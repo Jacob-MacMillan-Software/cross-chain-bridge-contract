@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+// eslint-disable-next-line node/no-extraneous-import
 import { deployMockContract } from "@ethereum-waffle/mock-contract";
 
 const IERC20 = require("../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json");

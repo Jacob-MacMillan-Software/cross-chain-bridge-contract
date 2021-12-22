@@ -1,0 +1,5 @@
+We must also send the `block valid until` in the tx so we can verify it is correct. We're able to get the current block on chain to see if the sig has expired
+
+Format of hashed data (seperate each element with '')
+
+Sender addr, destination network, fee token addr, fee token amount, block valid until
