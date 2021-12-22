@@ -34,17 +34,17 @@ contract FeeVerifyTester is TollBridge {
 	}
 
 	function testVerifyFee(
-		bytes32 _hash,
-		bytes calldata _signature,
 		uint256 _destination,
       address _tokenAddress,
-      bytes calldata _extraFeeData
+      bytes calldata _feeData
 	) external view returns (address) {
 		address feeToken;
 		uint256 feeAmount;
 		uint256 maxBlock;
+		bytes32 hash;
+		bytes memory signature;
 
-		(feeToken, feeAmount, maxBlock) = abi.decode(_extraFeeData, (address, uint256, uint256));
+		(feeToken, feeAmount, maxBlock, hash, signature) = abi.decode(_feeData, (address, uint256, uint256, bytes32, bytes));
 
 		console.log(toString(keccak256(abi.encode(
 			_msgSender(),
@@ -66,10 +66,10 @@ contract FeeVerifyTester is TollBridge {
 
 		console.log(toString(computedHash));
 
-		verifyFee(_hash, _signature, _destination, _tokenAddress, _extraFeeData);
+		verifyFee(_destination, _tokenAddress, _feeData);
 
-		console.log(_hash.recover(_signature));
+		console.log(hash.recover(signature));
 
-		return _hash.recover(_signature);
+		return hash.recover(signature);
 	}
 }

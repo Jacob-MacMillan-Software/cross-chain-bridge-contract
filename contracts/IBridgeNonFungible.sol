@@ -11,7 +11,7 @@ interface IBridgeNonFungible is IBridge {
 	 * @dev Transfers an ERC721 token to a different chain
 	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferFungible` event
 	 */
-	function transferNonFungible(address token, uint256 tokenId, uint256 networkId) external;
+	function transferNonFungible(address token, uint256 tokenId, uint256 networkId, bytes calldata data) external;
 
 	/**
 	 * @dev Used by the bridge relay to 'transfer' a user's item to the chain

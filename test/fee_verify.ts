@@ -53,13 +53,11 @@ describe("Fee Verification Signature", function () {
     console.log(`Hash: ${hash}, Sig: ${signature}`);
 
     const result = await bridge.testVerifyFee(
-      hash,
-      signature,
       dest,
       feeToken,
       abi.encode(
-        ["address", "uint256", "uint256"],
-        [feeToken, feeAmount, maxBlock]
+        ["address", "uint256", "uint256", "bytes32", "bytes"],
+        [feeToken, feeAmount, maxBlock, hash, signature]
       )
     );
 
@@ -111,13 +109,11 @@ describe("Fee Verification Signature", function () {
     let failed = false;
     try {
       await bridge.testVerifyFee(
-        hash,
-        signature,
         dest,
         feeToken,
         abi.encode(
-          ["address", "uint256", "uint256"],
-          [feeToken, feeAmount, maxBlock]
+          ["address", "uint256", "uint256", "bytes32", "bytes"],
+          [feeToken, feeAmount, maxBlock, hash, signature]
         )
       );
     } catch (err) {
@@ -130,6 +126,9 @@ describe("Fee Verification Signature", function () {
           )
       ) {
         failed = true;
+      } else {
+        // @ts-ignore
+        throw err;
       }
     }
 

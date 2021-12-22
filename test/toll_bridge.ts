@@ -59,16 +59,14 @@ describe("Toll Bridge", function () {
       );
 
       // Transfer a token to network 2
-      const transferTx = await bridge.transferFungibleWF(
+      const transferTx = await bridge.transferFungible(
         mockERC20.address,
         100,
         2,
         abi.encode(
-          ["address", "uint256", "uint256"],
-          [fakeFeeTokenAddr, 0, noExpireBlock]
-        ),
-        hash,
-        signature
+          ["address", "uint256", "uint256", "bytes32", "bytes"],
+          [fakeFeeTokenAddr, 0, noExpireBlock, hash, signature]
+        )
       );
 
       const tx = await transferTx.wait();
