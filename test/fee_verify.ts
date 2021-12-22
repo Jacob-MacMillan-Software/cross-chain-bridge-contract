@@ -3,51 +3,11 @@ import { ethers, upgrades } from "hardhat";
 // import { Contract } from "ethers";
 // eslint-disable-next-line node/no-extraneous-import
 import { deployMockContract } from "@ethereum-waffle/mock-contract";
+// eslint-disable-next-line node/no-missing-import
+import { generateHashedMessage } from "./helpers/messageSigning";
 
 const IERC20 = require("../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json");
-
-// const zeroAddress = "0x0000000000000000000000000000000000000000";
-// const oneAddress = "0x1111111111111111111111111111111111111111";
-
-async function generateHashedMessage(
-  // @ts-ignore
-  sender, // @ts-ignore
-  destination, // @ts-ignore
-  feeToken, // @ts-ignore
-  feeAmount, // @ts-ignore
-  maxBlock, // @ts-ignore
-  signer
-) {
-  const abi = new ethers.utils.AbiCoder();
-
-  const types = ["address", "uint256", "address", "uint256", "uint256"];
-  const data = [sender, destination, feeToken, feeAmount, maxBlock];
-
-  const abiEncoded = abi.encode(types, data);
-
-  console.log(`ABI Encoded by test: ${abiEncoded}`);
-
-  const message = ethers.utils.keccak256(abiEncoded);
-  console.log(`Hash of encoded by test by test: ${message}`);
-
-  /* const message = ethers.utils.id(
-    `${sender}${destination}${feeToken}${feeAmount}${maxBlock}`
-  ); */
-  // const message = ethers.utils.id("test");
-
-  const messageBuffer = Buffer.from(message.substring(2), "hex");
-  const prefix = Buffer.from(
-    `\u0019Ethereum Signed Message:\n${messageBuffer.length}`
-  );
-  const hash = ethers.utils.keccak256(Buffer.concat([prefix, messageBuffer]));
-
-  const messageHash = ethers.utils.arrayify(message);
-
-  const signature /* flatSig */ = await signer.signMessage(messageHash);
-  // const signature = ethers.utils.splitSignature(flatSig);
-
-  return [hash, signature];
-}
+const abi = new ethers.utils.AbiCoder();
 
 describe("Fee Verification Signature", function () {
   it("Verify a valid signature", async function () {
@@ -60,7 +20,10 @@ describe("Fee Verification Signature", function () {
     await mockERC20.mock.transfer.returns(true);
 
     const Bridge = await ethers.getContractFactory("FeeVerifyTester");
-    const bridge = await upgrades.deployProxy(Bridge, [owner.address]);
+    const bridge = await upgrades.deployProxy(Bridge, [
+      owner.address,
+      owner.address,
+    ]);
     await bridge.deployed();
 
     await bridge.setFeeVerifier(addr1.address);
@@ -83,6 +46,7 @@ describe("Fee Verification Signature", function () {
       feeToken,
       feeAmount,
       maxBlock,
+      mockERC20.address,
       addr1
     );
 
@@ -93,8 +57,10 @@ describe("Fee Verification Signature", function () {
       signature,
       dest,
       feeToken,
-      feeAmount,
-      maxBlock
+      abi.encode(
+        ["address", "uint256", "uint256"],
+        [feeToken, feeAmount, maxBlock]
+      )
     );
 
     expect(result).to.equal(addr1.address);
@@ -110,7 +76,10 @@ describe("Fee Verification Signature", function () {
     await mockERC20.mock.transfer.returns(true);
 
     const Bridge = await ethers.getContractFactory("FeeVerifyTester");
-    const bridge = await upgrades.deployProxy(Bridge, [owner.address]);
+    const bridge = await upgrades.deployProxy(Bridge, [
+      owner.address,
+      owner.address,
+    ]);
     await bridge.deployed();
 
     await bridge.setFeeVerifier(addr1.address);
@@ -133,6 +102,7 @@ describe("Fee Verification Signature", function () {
       feeToken,
       feeAmount,
       maxBlock,
+      mockERC20.address,
       addr1
     );
 
@@ -145,8 +115,10 @@ describe("Fee Verification Signature", function () {
         signature,
         dest,
         feeToken,
-        feeAmount,
-        maxBlock
+        abi.encode(
+          ["address", "uint256", "uint256"],
+          [feeToken, feeAmount, maxBlock]
+        )
       );
     } catch (err) {
       if (

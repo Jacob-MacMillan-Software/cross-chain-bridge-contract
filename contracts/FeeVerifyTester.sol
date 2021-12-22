@@ -37,29 +37,36 @@ contract FeeVerifyTester is TollBridge {
 		bytes32 _hash,
 		bytes calldata _signature,
 		uint256 _destination,
-		address _feeToken,
-		uint256 _feeAmount,
-		uint256 _maxBlock
+      address _tokenAddress,
+      bytes calldata _extraFeeData
 	) external view returns (address) {
+		address feeToken;
+		uint256 feeAmount;
+		uint256 maxBlock;
+
+		(feeToken, feeAmount, maxBlock) = abi.decode(_extraFeeData, (address, uint256, uint256));
+
 		console.log(toString(keccak256(abi.encode(
 			_msgSender(),
 			_destination,
-			_feeToken,
-			_feeAmount,
-			_maxBlock
+			feeToken,
+			feeAmount,
+			maxBlock,
+         _tokenAddress
 		))));
 
 		bytes32 computedHash = keccak256(abi.encode(
 			_msgSender(),
 			_destination,
-			_feeToken,
-			_feeAmount,
-			_maxBlock
+			feeToken,
+			feeAmount,
+			maxBlock,
+         _tokenAddress
 		)).toEthSignedMessageHash();
 
 		console.log(toString(computedHash));
 
-		verifyFee(_hash, _signature, _destination, _feeToken, _feeAmount, _maxBlock);
+		verifyFee(_hash, _signature, _destination, _tokenAddress, _extraFeeData);
 
 		console.log(_hash.recover(_signature));
 

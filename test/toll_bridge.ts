@@ -3,10 +3,17 @@ import { ethers, upgrades } from "hardhat";
 import { Contract } from "ethers";
 // eslint-disable-next-line node/no-extraneous-import
 import { deployMockContract } from "@ethereum-waffle/mock-contract";
+// eslint-disable-next-line node/no-missing-import
+import { generateHashedMessage } from "./helpers/messageSigning";
 
 const IERC20 = require("../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json");
 const IERC721 = require("../artifacts/contracts/IERC721Bridgable.sol/IERC721Bridgable.json");
 const IERC1155 = require("../artifacts/contracts/IERC1155Bridgable.sol/IERC1155Bridgable.json");
+const abi = new ethers.utils.AbiCoder();
+
+const zeroAddress = "0x0000000000000000000000000000000000000000";
+const fakeFeeTokenAddr = "0x1111111111111111111111111111111111111111";
+const noExpireBlock = 999999999;
 
 describe("Toll Bridge", function () {
   let tollToken: Contract;
@@ -24,7 +31,7 @@ describe("Toll Bridge", function () {
 
   describe("ERC20 bridge", function () {
     it("Transfer a fungilbe token to another network with no fee", async function () {
-      const [owner] = await ethers.getSigners();
+      const [owner, addr1] = await ethers.getSigners();
 
       const mockERC20 = await deployMockContract(owner, IERC20.abi);
 
@@ -36,15 +43,32 @@ describe("Toll Bridge", function () {
       const Bridge = await ethers.getContractFactory("TollBridge");
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
-        tollToken.address,
+        addr1.address,
       ]);
       await bridge.deployed();
 
+      // Generate fee verification
+      const [hash, signature] = await generateHashedMessage(
+        owner.address,
+        2,
+        fakeFeeTokenAddr,
+        0,
+        noExpireBlock,
+        mockERC20.address,
+        addr1
+      );
+
       // Transfer a token to network 2
-      const transferTx = await bridge.transferFungible(
+      const transferTx = await bridge.transferFungibleWF(
         mockERC20.address,
         100,
-        2
+        2,
+        abi.encode(
+          ["address", "uint256", "uint256"],
+          [fakeFeeTokenAddr, 0, noExpireBlock]
+        ),
+        hash,
+        signature
       );
 
       const tx = await transferTx.wait();

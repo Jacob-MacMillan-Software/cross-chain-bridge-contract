@@ -18,33 +18,8 @@ contract TollBridge is Bridge {
 	// Could possibly also have this address be a contract that signs the hashes
 	address public feeVerifier;
 
-	event TokenTransferFungible(
-		address indexed from,
-		address indexed token,
-		uint256 amount,
-		uint256 networkId,
-		address feeToken,
-		uint256 feeAmount
-	);
-	event TokenTransferMixedFungible(
-		address indexed from,
-		address indexed token,
-		uint256 tokenId,
-		uint256 amount,
-		uint256 networkId,
-		address feeToken,
-		uint256 feeAmount
-	);
-	event TokenTransferNonFungible(
-		address indexed from,
-		address indexed token,
-		uint256 tokenId,
-		uint256 networkId,
-		address feeToken,
-		uint256 feeAmount
-	);
-
-	function initialize(address _controller) public virtual initializer {
+	function initialize(address _controller, address _verifier) public virtual initializer {
+      feeVerifier = _verifier;
 		Bridge.__init_bridge(_controller);
 	}
 
@@ -62,44 +37,56 @@ contract TollBridge is Bridge {
 		bytes32 _hash,
 		bytes calldata _signature,
 		uint256 _destination,
-		address _feeToken,
-		uint256 _feeAmount,
-		uint256 _maxBlock
+      address _tokenAddress,
+      bytes calldata _feeData
 	) internal view {
+		address feeToken;
+		uint256 feeAmount;
+		uint256 maxBlock;
+
+		(feeToken, feeAmount, maxBlock) = abi.decode(_feeData, (address, uint256, uint256));
+
+      // This is done in order from least gas cost to highest to save gas if one of the checks fail
+      // Note that I'm just guessing the order of the last two. Still need to verify that
+
 		// Verfiy fee signature is still valid (within correct block range)
-		require(block.number <= _maxBlock, "TollBridge: Fee validation expired");
+		require(block.number <= maxBlock, "TollBridge: Fee validation expired");
+      
+		// Check that hash is signed by a valid address
+		require(_hash.recover(_signature) == feeVerifier, "TollBridge: Invalid validation");
 
 		// Verify hash matches sent data
 		bytes32 computedHash = keccak256(abi.encode(
 			_msgSender(),
 			_destination,
-			_feeToken,
-			_feeAmount,
-			_maxBlock
+			feeToken,
+			feeAmount,
+			maxBlock,
+         _tokenAddress
 		)).toEthSignedMessageHash();
 
 		require(_hash == computedHash, "TollBridge: Hash does not match data");
-
-		// Check that hash is signed by a valid address
-		require(_hash.recover(_signature) == feeVerifier, "TollBridge: Invalid validation");
 	}
 
 	/**
 	 * @dev Transfers an ERC20 token to a different chain
 	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferFungible` event
 	 */
-	function transferFungible(
+	function transferFungibleWF(
 		address _token,
 	   uint256 _amount,
 		uint256 _networkId,
-		address _feeToken,
-		uint256 _feeAmount
-	) external virtual {
+		bytes calldata _feeData,
+      bytes32 _hash,
+      bytes calldata _signature
+	) external {
+      verifyFee(_hash, _signature, _networkId, _token, _feeData);
+
 		IERC20Upgradeable(_token).transferFrom(_msgSender(), address(this), _amount);
 
-      _payToll(_feeToken, _feeAmount);
+      _payToll(_feeData);
 
-      emit TokenTransferFungible(_msgSender(), _token, _amount, _networkId, _feeToken, _feeAmount);
+      emit TokenTransferFungible(_msgSender(), _token, _amount, _networkId);
    }
 
 	/**
@@ -110,16 +97,18 @@ contract TollBridge is Bridge {
 		address _token,
 		uint256 _tokenId,
 		uint256 _networkId,
-		address _feeToken,
-		uint256 _feeAmount
+		bytes calldata _feeData,
+      bytes32 _hash,
+      bytes calldata _signature
 	) external virtual {
 		// require(networkId != chainId(), "Same chainId");
+      verifyFee(_hash, _signature, _networkId, _token, _feeData);
 
 		IERC721Upgradeable(_token).transferFrom(_msgSender(), address(this), _tokenId);
 
-		_payToll(_feeToken, _feeAmount);
+		_payToll(_feeData);
 
-		emit TokenTransferNonFungible(_msgSender(), _token, _tokenId, _networkId, _feeToken, _feeAmount);
+		emit TokenTransferNonFungible(_msgSender(), _token, _tokenId, _networkId);
 	}
 
 	/**
@@ -131,16 +120,18 @@ contract TollBridge is Bridge {
 		uint256 _tokenId,
 		uint256 _amount,
 		uint256 _networkId,
-		address _feeToken,
-		uint256 _feeAmount
+		bytes calldata _feeData,
+      bytes32 _hash,
+      bytes calldata _signature
 	) external virtual {
 		// require(networkId != chainId(), "Same chainId");
+      verifyFee(_hash, _signature, _networkId, _token, _feeData);
 
 		IERC1155Upgradeable(_token).safeTransferFrom(_msgSender(), address(this), _tokenId, _amount, toBytes(0));
 
-		_payToll(_feeToken, _feeAmount);
+		_payToll(_feeData);
 
-		emit TokenTransferMixedFungible(_msgSender(), _token, _tokenId, _amount, _networkId, _feeToken, _feeAmount);
+		emit TokenTransferMixedFungible(_msgSender(), _token, _tokenId, _amount, _networkId);
 	}
 
 	function withdrawalFees(address _token, uint256 _amount) external virtual onlyController {
@@ -152,10 +143,15 @@ contract TollBridge is Bridge {
 	/**
 	* @dev Pull the amount of `tollToken` equal to `_fee` from the user's account to pay the bridge toll
 	*/
-	function _payToll(address _token, uint256 _fee) internal {
-		if(_fee > 0) {
-			pendingFees[_token] += _fee;
-			IERC20Upgradeable(_token).transferFrom(_msgSender(), address(this), _fee);
+	function _payToll(bytes calldata _feeData) internal {
+		address token;
+		uint256 fee;
+
+		(token, fee, ) = abi.decode(_feeData, (address, uint256, uint256));
+
+		if(fee > 0) {
+			pendingFees[token] += fee;
+			IERC20Upgradeable(token).transferFrom(_msgSender(), address(this), fee);
 		}
 	}
 }
