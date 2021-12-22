@@ -1,117 +1,108 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import "./Bridge.sol";
 
-
 contract TollBridge is Bridge {
+	using ECDSAUpgradeable for bytes32;
+	using ECDSAUpgradeable for bytes;
 
-	/**
-	 * @notice The ERC-20 token used to pay the bridge toll
-	 */
-	IERC20Upgradeable public tollToken;
-
-	// Toll fees
-	uint256 public fungibleFee;
-	uint256 public nonFungibleFee;
-	uint256 public mixedFungibleFee;
 	// Fees that have been paid and can be withdrawn from this contract
-	uint256 public pendingFees;
+	mapping (address => uint256) public pendingFees;
 
-	function initialize(address _controller, address _tollToken) public virtual initializer {
-		tollToken = IERC20Upgradeable(_tollToken);
+	// Address that can sign fee hashes
+	// In the future we will change this to a ERC-20 token contract
+	// and anyone who holds a token will be allowed to sign fee hashes
+	// Could possibly also have this address be a contract that signs the hashes
+	address public feeVerifier;
+
+	function initialize(address _controller, address _verifier) public virtual initializer {
+      feeVerifier = _verifier;
 		Bridge.__init_bridge(_controller);
 	}
 
-
-	// Functions to adjust the fees
-	function changeFungibleFee(uint256 _fee) external onlyController {
-		fungibleFee = _fee;
+	function setFeeVerifier(address _newVerifier) external onlyOwner {
+		feeVerifier = _newVerifier;
 	}
 
-	function changeNonFungibleFee(uint256 _fee) external onlyController {
-		nonFungibleFee = _fee;
-	}
+	/** @dev Uses a ECDSA hash to verify that the fee paid is valid
+	 * The hash must contain the following data, in the following order, with each element seperated by ''
+	 * Sender addr, destination network, fee token addr, fee token amount, block valid until, address of token contract to bridge
+	 * 
+	 * If `block.number` > block valid until, revert
+	 * _feeData must be ABI encoded data of the following
+	 * feeToken[address], feeAmount[uint256], maxBlock[uint256], hash[bytes32], signature[bytes]
+	 */
+	function verifyFee(
+		uint256 _destination,
+      address _tokenAddress,
+      bytes calldata _feeData
+	) internal view {
+		address feeToken;
+		uint256 feeAmount;
+		uint256 maxBlock;
+		bytes32 hash;
+		bytes memory signature;
 
-	function changeMixedFungibleFee(uint256 _fee) external onlyController {
-		mixedFungibleFee = _fee;
+		(feeToken, feeAmount, maxBlock, hash, signature) = abi.decode(_feeData, (address, uint256, uint256, bytes32, bytes));
+
+      // This is done in order from least gas cost to highest to save gas if one of the checks fail
+      // Note that I'm just guessing the order of the last two. Still need to verify that
+
+		// Verfiy fee signature is still valid (within correct block range)
+		require(block.number <= maxBlock, "TollBridge: Fee validation expired");
+      
+		// Check that hash is signed by a valid address
+		require(hash.recover(signature) == feeVerifier, "TollBridge: Invalid validation");
+
+		// Verify hash matches sent data
+		bytes32 computedHash = keccak256(abi.encode(
+			_msgSender(),
+			_destination,
+			feeToken,
+			feeAmount,
+			maxBlock,
+         _tokenAddress
+		)).toEthSignedMessageHash();
+
+		require(hash == computedHash, "TollBridge: Hash does not match data");
 	}
 
 	/**
 	 * @dev Transfers an ERC20 token to a different chain
 	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferFungible` event
 	 */
-	function transferFungible(address token, uint256 amount, uint256 networkId) external virtual override {
-		IERC20Upgradeable(token).transferFrom(_msgSender(), address(this), amount);
+	function transferFungible(
+		address _token,
+	   uint256 _amount,
+		uint256 _networkId,
+		bytes calldata _feeData
+	) external virtual override {
+      verifyFee(_networkId, _token, _feeData);
+	
+		_transferFungible(_token, _amount, _networkId);
 
-      _payToll(fungibleFee);
-
-      emit TokenTransferFungible(_msgSender(), token, amount, networkId);
+      _payToll(_feeData);
    }
-
-	/**
-	 * @dev Used by bridge network to transfer the item directly to user without need for manual claiming
-	 */
-	function bridgeClaimFungibleWithFeeRebate(
-		address token,
-		address to,
-		uint256 amount,
-		uint256 feeRebate
-	) external virtual onlyController {
-		require(IERC20Upgradeable(token).balanceOf(address(this)) >= amount, "Insufficient liquidity");
-
-		IERC20Upgradeable(token).transfer(to, amount);
-		
-		_rebateFee(to, feeRebate);
-
-		emit TokenClaimedFungible(to, token, amount);
-	}
 
 	/**
 	 * @dev Transfers an ERC721 token to a different chain
 	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferNonFungible` event
 	 */
-	function transferNonFungible(address token, uint256 tokenId, uint256 networkId) external virtual override {
+	function transferNonFungible(
+		address _token,
+		uint256 _tokenId,
+		uint256 _networkId,
+		bytes calldata _feeData
+	) external virtual override {
 		// require(networkId != chainId(), "Same chainId");
+      verifyFee(_networkId, _token, _feeData);
+		
+		_transferNonFungible(_token, _tokenId, _networkId);
 
-		IERC721Upgradeable(token).transferFrom(_msgSender(), address(this), tokenId);
-
-		_payToll(nonFungibleFee);
-
-		emit TokenTransferNonFungible(_msgSender(), token, tokenId, networkId);
-	}
-
-	/**
-	 * @dev Used by bridge network to transfer the item directly to user without need for manual claiming
-	 */
-	function bridgeClaimNonFungibleWithFeeRebate(
-		address token,
-		address to,
-		uint256 tokenId,
-		uint256 feeRebate
-	) external virtual onlyController {
-		address tokenOwner;
-		// The try-catch block is because `ownerOf` can (and I think is supposed to) revert if the item doesn't yet exist on this chain
-		try IERC721Bridgable(token).ownerOf(tokenId) returns (address _owner) {
-			tokenOwner = _owner;
-		} catch {
-			tokenOwner = address(0);
-		}
-
-		// Check if the token needs to be minted
-		// If it does, attempt to mint it (will fail if this contract has no such permission, or the ERC721 contract doesn't support bridgeMint)
-		// If the token exists, and the owner is this contract, it will be sent like normal
-		// Otherwise this contract will revert
-		if(tokenOwner == address(0)) {
-			IERC721Bridgable(token).bridgeMint(_msgSender(), tokenId);
-		} else {
-			// This will revert if the bridge does not own the token; this is intended
-			IERC721Bridgable(token).transferFrom(address(this), to, tokenId);
-		}
-	
-		_rebateFee(to, feeRebate);
-
-		emit TokenClaimedNonFungible(to, token, tokenId);
+		_payToll(_feeData);
 	}
 
 	/**
@@ -119,69 +110,38 @@ contract TollBridge is Bridge {
 	* This function simply moves the caller's tokens to this contract, and emits a `TokenTransferMixedFungible` event
 	*/
 	function transferMixedFungible(
-		address token,
-		uint256 tokenId,
-		uint256 amount,
-		uint256 networkId
+		address _token,
+		uint256 _tokenId,
+		uint256 _amount,
+		uint256 _networkId,
+		bytes calldata _feeData
 	) external virtual override {
 		// require(networkId != chainId(), "Same chainId");
+      verifyFee(_networkId, _token, _feeData);
+		
+		_transferMixedFungible(_token, _tokenId, _amount, _networkId);
 
-		IERC1155Upgradeable(token).safeTransferFrom(_msgSender(), address(this), tokenId, amount, toBytes(0));
+		_payToll(_feeData);
+	}
 
-		_payToll(mixedFungibleFee);
-
-		emit TokenTransferMixedFungible(_msgSender(), token, tokenId, amount, networkId);
+	function withdrawalFees(address _token, uint256 _amount) external virtual onlyController {
+		require(pendingFees[_token] >= _amount, "Insufficient funds");
+		pendingFees[_token] -= _amount;
+		IERC20Upgradeable(_token).transfer(_msgSender(), _amount);
 	}
 
 	/**
-	 * @dev Used by bridge network to transfer the item directly to user without need for manual claiming
-	 */
-	function bridgeClaimMixedFungibleWithFeeRebate(
-		address token,
-		address to,
-		uint256 tokenId,
-		uint256 amount,
-		uint256 feeRebate
-	) external virtual onlyController {
-		// Get balance of tokens that this contract owns, mint the rest
-		uint256 balance = IERC1155Bridgable(token).balanceOf(address(this), tokenId);
-		uint256 balanceToMint = 0;
-		uint256 balanceToTransfer = amount;
-
-		if(balance < amount) {
-			balanceToMint = amount - balance;
-			balanceToTransfer = balance;
-		}
-
-		IERC1155Bridgable(token).safeTransferFrom(address(this), to, tokenId, balanceToTransfer, toBytes(0));
-
-		if(balanceToMint > 0) {
-			IERC1155Bridgable(token).bridgeMint(to, tokenId, balanceToMint);
-		}
-
-		_rebateFee(to, feeRebate);
-
-		emit TokenClaimedMixedFungible(to, token, tokenId, amount);
-	}
-
-	function withdrawalFees(uint256 amount) external virtual onlyController {
-		require(pendingFees >= amount, "Insufficient funds");
-		pendingFees -= amount;
-		tollToken.transfer(_msgSender(), amount);
-	}
-
-	function _rebateFee(address to, uint256 balance) internal {
-		if(balance > 0) {
-			tollToken.transfer(to, balance);
-		}
-	}
-
-	/**
-	* @dev Pull the an amount of `tollToken` equal to `_fee` from the user's account to pay the bridge toll
+	* @dev Pull the amount of `tollToken` equal to `_fee` from the user's account to pay the bridge toll
 	*/
-	function _payToll(uint256 _fee) internal {
-		if(_fee > 0) {
-			tollToken.transferFrom(_msgSender(), address(this), _fee);
+	function _payToll(bytes calldata _feeData) internal {
+		address token;
+		uint256 fee;
+
+		(token, fee,,, ) = abi.decode(_feeData, (address, uint256, uint256, bytes32, bytes));
+
+		if(fee > 0) {
+			pendingFees[token] += fee;
+			IERC20Upgradeable(token).transferFrom(_msgSender(), address(this), fee);
 		}
 	}
 }

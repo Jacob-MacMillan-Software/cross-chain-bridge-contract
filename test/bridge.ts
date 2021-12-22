@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+// eslint-disable-next-line node/no-extraneous-import
 import { deployMockContract } from "@ethereum-waffle/mock-contract";
 
 const IERC20 = require("../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json");
@@ -27,7 +28,8 @@ describe("Bridge", function () {
       const transferTx = await bridge.transferFungible(
         mockERC20.address,
         100,
-        2
+        2,
+        "0x"
       );
 
       const tx = await transferTx.wait();
@@ -93,7 +95,8 @@ describe("Bridge", function () {
       const transferTx = await bridge.transferNonFungible(
         mockERC721.address,
         1,
-        2
+        2,
+        "0x"
       );
 
       const tx = await transferTx.wait();
@@ -161,7 +164,8 @@ describe("Bridge", function () {
         mockERC1155.address,
         1,
         100,
-        2
+        2,
+        "0x"
       );
 
       const tx = await transferTx.wait();

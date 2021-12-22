@@ -48,53 +48,55 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 	 * @dev Transfers an ERC20 token to a different chain
 	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferFungible` event
 	 */
-	function transferFungible(address token, uint256 amount, uint256 networkId) external virtual override {
-		// require(networkId != chainId(), "Same chainId");
-
-		IERC20Upgradeable(token).transferFrom(_msgSender(), address(this), amount);
-
-		emit TokenTransferFungible(_msgSender(), token, amount, networkId);
+	function transferFungible(
+		address token,
+		uint256 amount,
+		uint256 networkId,
+		bytes calldata
+	) external virtual override {
+		_transferFungible(token, amount, networkId);
 	}
 
 	/**
 	 * @dev Used by bridge network to transfer the item directly to user without need for manual claiming
 	 */
 	function bridgeClaimFungible(
-		address token,
-		address to,
-		uint256 amount
+		address _token,
+		address _to,
+		uint256 _amount
 	) external virtual override onlyController {
-		require(IERC20Upgradeable(token).balanceOf(address(this)) >= amount, "Insufficient liquidity");
+		require(IERC20Upgradeable(_token).balanceOf(address(this)) >= _amount, "Insufficient liquidity");
 
-		IERC20Upgradeable(token).transfer(to, amount);
+		IERC20Upgradeable(_token).transfer(_to, _amount);
 
-		emit TokenClaimedFungible(to, token, amount);
+		emit TokenClaimedFungible(_to, _token, _amount);
 	}
 
 	/**
 	 * @dev Transfers an ERC721 token to a different chain
 	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferNonFungible` event
 	 */
-	function transferNonFungible(address token, uint256 tokenId, uint256 networkId) external virtual override {
-		// require(networkId != chainId(), "Same chainId");
-
-		IERC721Upgradeable(token).transferFrom(_msgSender(), address(this), tokenId);
-
-		emit TokenTransferNonFungible(_msgSender(), token, tokenId, networkId);
+	function transferNonFungible(
+		address _token,
+		uint256 _tokenId,
+		uint256 _networkId,
+		bytes calldata
+	) external virtual override {
+		_transferNonFungible(_token, _tokenId, _networkId);
 	}
 
 	/**
 	 * @dev Used by bridge network to transfer the item directly to user without need for manual claiming
 	 */
 	function bridgeClaimNonFungible(
-		address token,
-		address to,
-		uint256 tokenId
+		address _token,
+		address _to,
+		uint256 _tokenId
 	) external virtual override onlyController {
 		address tokenOwner;
 		// The try-catch block is because `ownerOf` can (and I think is supposed to) revert if the item doesn't yet exist on this chain
-		try IERC721Bridgable(token).ownerOf(tokenId) returns (address _owner) {
-			tokenOwner = _owner;
+		try IERC721Bridgable(_token).ownerOf(_tokenId) returns (address owner) {
+			tokenOwner = owner;
 		} catch {
 			tokenOwner = address(0);
 		}
@@ -104,26 +106,27 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 		// If the token exists, and the owner is this contract, it will be sent like normal
 		// Otherwise this contract will revert
 		if(tokenOwner == address(0)) {
-			IERC721Bridgable(token).bridgeMint(_msgSender(), tokenId);
+			IERC721Bridgable(_token).bridgeMint(_msgSender(), _tokenId);
 		} else {
 			// This will revert if the bridge does not own the token; this is intended
-			IERC721Bridgable(token).transferFrom(address(this), to, tokenId);
+			IERC721Bridgable(_token).transferFrom(address(this), _to, _tokenId);
 		}
 
-		emit TokenClaimedNonFungible(to, token, tokenId);
+		emit TokenClaimedNonFungible(_to, _token, _tokenId);
 	}
-
 
 	/**
 	* @dev Transfers an ERC1155 token to a different chain
 	* This function simply moves the caller's tokens to this contract, and emits a `TokenTransferMixedFungible` event
 	*/
-	function transferMixedFungible(address token, uint256 tokenId, uint256 amount, uint256 networkId) external virtual override {
-		// require(networkId != chainId(), "Same chainId");
-
-		IERC1155Upgradeable(token).safeTransferFrom(_msgSender(), address(this), tokenId, amount, toBytes(0));
-
-		emit TokenTransferMixedFungible(_msgSender(), token, tokenId, amount, networkId);
+	function transferMixedFungible(
+		address _token,
+		uint256 _tokenId,
+		uint256 _amount,
+		uint256 _networkId,
+		bytes calldata
+	) external virtual override {
+		_transferMixedFungible(_token, _tokenId, _amount, _networkId);
 	}
 
 	/**
@@ -157,5 +160,34 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 	function toBytes(uint256 x) internal pure returns (bytes memory b) {
 		b = new bytes(32);
 		assembly { mstore(add(b, 32), x) }
+	}
+
+	function _transferFungible(address token, uint256 amount, uint256 networkId) internal {
+		// require(networkId != chainId(), "Same chainId");
+
+		IERC20Upgradeable(token).transferFrom(_msgSender(), address(this), amount);
+
+		emit TokenTransferFungible(_msgSender(), token, amount, networkId);
+	}
+
+	function _transferNonFungible(address _token, uint256 _tokenId, uint256 _networkId) internal {
+		// require(networkId != chainId(), "Same chainId");
+
+		IERC721Upgradeable(_token).transferFrom(_msgSender(), address(this), _tokenId);
+
+		emit TokenTransferNonFungible(_msgSender(), _token, _tokenId, _networkId);
+	}
+
+	function _transferMixedFungible(
+		address _token,
+		uint256 _tokenId,
+		uint256 _amount,
+		uint256 _networkId
+	) internal {
+		// require(networkId != chainId(), "Same chainId");
+
+		IERC1155Upgradeable(_token).safeTransferFrom(_msgSender(), address(this), _tokenId, _amount, toBytes(0));
+
+		emit TokenTransferMixedFungible(_msgSender(), _token, _tokenId, _amount, _networkId);
 	}
 }
