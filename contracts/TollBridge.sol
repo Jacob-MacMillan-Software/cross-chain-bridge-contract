@@ -5,9 +5,6 @@ import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.
 import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 import "./Bridge.sol";
 
-import "hardhat/console.sol";
-
-
 contract TollBridge is Bridge {
 	using ECDSAUpgradeable for bytes32;
 	using ECDSAUpgradeable for bytes;
@@ -72,8 +69,6 @@ contract TollBridge is Bridge {
 		// Verfiy fee signature is still valid (within correct block range)
 		require(block.number <= _maxBlock, "TollBridge: Fee validation expired");
 
-		string memory addressAsStr = toString(_msgSender());
-
 		// Verify hash matches sent data
 		bytes32 computedHash = keccak256(abi.encode(
 			_msgSender(),
@@ -83,64 +78,10 @@ contract TollBridge is Bridge {
 			_maxBlock
 		)).toEthSignedMessageHash();
 
-		console.log(toString(keccak256(abi.encode(
-			_msgSender(),
-			_destination,
-			_feeToken,
-			_feeAmount,
-			_maxBlock
-		))));
-
-		console.log(toString(computedHash));
-
-		// bytes32 computedHash = keccak256("test").toEthSignedMessageHash();
-
 		require(_hash == computedHash, "TollBridge: Hash does not match data");
 
 		// Check that hash is signed by a valid address
-      console.log(_hash.recover(_signature));
 		require(_hash.recover(_signature) == feeVerifier, "TollBridge: Invalid validation");
-	}
-
-	function toString(address account) public pure returns(string memory) {
-		 return toString(abi.encodePacked(account));
-	}
-
-	function toString(uint256 value) public pure returns(string memory) {
-		 return toString(abi.encodePacked(value));
-	}
-
-	function toString(bytes32 value) public pure returns(string memory) {
-		 return toString(abi.encodePacked(value));
-	}
-
-	function toString(bytes memory data) public pure returns(string memory) {
-		 bytes memory alphabet = "0123456789abcdef";
-
-		 bytes memory str = new bytes(2 + data.length * 2);
-		 str[0] = "0";
-		 str[1] = "x";
-		 for (uint i = 0; i < data.length; i++) {
-			  str[2+i*2] = alphabet[uint(uint8(data[i] >> 4))];
-			  str[3+i*2] = alphabet[uint(uint8(data[i] & 0x0f))];
-		 }
-		 return string(str);
-	}
-
-	/********************************************
-	 * Remove for deployement
-	 * Used to test verifyFee function
-	 *********************************************/
-	function removeBeforeDeployTestVerifyFee(
-		bytes32 _hash,
-		bytes calldata _signature,
-		uint256 _destination,
-		address _feeToken,
-		uint256 _feeAmount,
-		uint256 _maxBlock
-	) external view returns (address) {
-		verifyFee(_hash, _signature, _destination, _feeToken, _feeAmount, _maxBlock);
-		return _hash.recover(_signature);
 	}
 
 	/**
@@ -209,7 +150,7 @@ contract TollBridge is Bridge {
 	}
 
 	/**
-	* @dev Pull the an amount of `tollToken` equal to `_fee` from the user's account to pay the bridge toll
+	* @dev Pull the amount of `tollToken` equal to `_fee` from the user's account to pay the bridge toll
 	*/
 	function _payToll(address _token, uint256 _fee) internal {
 		if(_fee > 0) {
