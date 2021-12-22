@@ -28,7 +28,8 @@ describe("Bridge", function () {
       const transferTx = await bridge.transferFungible(
         mockERC20.address,
         100,
-        2
+        2,
+        "0x"
       );
 
       const tx = await transferTx.wait();
@@ -94,7 +95,8 @@ describe("Bridge", function () {
       const transferTx = await bridge.transferNonFungible(
         mockERC721.address,
         1,
-        2
+        2,
+        "0x"
       );
 
       const tx = await transferTx.wait();
@@ -162,7 +164,8 @@ describe("Bridge", function () {
         mockERC1155.address,
         1,
         100,
-        2
+        2,
+        "0x"
       );
 
       const tx = await transferTx.wait();

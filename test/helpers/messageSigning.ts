@@ -24,10 +24,10 @@ export async function generateHashedMessage(
 
   const abiEncoded = abi.encode(types, data);
 
-  console.log(`ABI Encoded by test: ${abiEncoded}`);
+  // console.log(`ABI Encoded by test: ${abiEncoded}`);
 
   const message = ethers.utils.keccak256(abiEncoded);
-  console.log(`Hash of encoded by test by test: ${message}`);
+  // console.log(`Hash of encoded by test by test: ${message}`);
 
   /* const message = ethers.utils.id(
     `${sender}${destination}${feeToken}${feeAmount}${maxBlock}`
@@ -46,4 +46,32 @@ export async function generateHashedMessage(
   // const signature = ethers.utils.splitSignature(flatSig);
 
   return [hash, signature];
+}
+
+export async function generateFeeData(
+  // @ts-ignore
+  sender, // @ts-ignore
+  destination, // @ts-ignore
+  feeToken, // @ts-ignore
+  feeAmount, // @ts-ignore
+  maxBlock, // @ts-ignore
+  tokenAddr, // @ts-ignore
+  signer
+) {
+  const [hash, signature] = await generateHashedMessage(
+    sender,
+    destination,
+    feeToken,
+    feeAmount,
+    maxBlock,
+    tokenAddr,
+    signer
+  );
+
+  const abi = new ethers.utils.AbiCoder();
+
+  return abi.encode(
+    ["address", "uint256", "uint256", "bytes32", "bytes"],
+    [feeToken, feeAmount, maxBlock, hash, signature]
+  );
 }
