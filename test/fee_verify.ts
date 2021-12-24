@@ -6,6 +6,8 @@ import { deployMockContract } from "@ethereum-waffle/mock-contract";
 // eslint-disable-next-line node/no-missing-import
 import { generateHashedMessage } from "./helpers/messageSigning";
 
+const zeroAddress = "0x0000000000000000000000000000000000000000";
+
 const IERC20 = require("../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json");
 const abi = new ethers.utils.AbiCoder();
 
@@ -133,5 +135,46 @@ describe("Fee Verification Signature", function () {
     }
 
     expect(failed).to.equal(true);
+  });
+
+  it("Check gas prices of each step in fee validation process", async function () {
+    const [owner, addr1] = await ethers.getSigners();
+
+    // Initalize bridge
+    const mockERC20 = await deployMockContract(owner, IERC20.abi);
+
+    await mockERC20.mock.transferFrom.returns(true);
+    await mockERC20.mock.transfer.returns(true);
+
+    const Bridge = await ethers.getContractFactory("FeeVerifyTester");
+    const bridge = await upgrades.deployProxy(Bridge, [
+      owner.address,
+      addr1.address,
+    ]);
+    await bridge.deployed();
+
+    // Create signed message
+    const dest = 1;
+    const feeToken = mockERC20.address;
+    const feeAmount = 100;
+    const maxBlock = 99999999999;
+
+    const [hash, signature] = await generateHashedMessage(
+      owner.address,
+      dest,
+      feeToken,
+      feeAmount,
+      maxBlock,
+      zeroAddress,
+      addr1
+    );
+
+    await bridge.gasTester(
+      dest,
+      abi.encode(
+        ["address", "uint256", "uint256", "bytes32", "bytes"],
+        [feeToken, feeAmount, maxBlock, hash, signature]
+      )
+    );
   });
 });

@@ -72,4 +72,49 @@ contract FeeVerifyTester is TollBridge {
 
 		return hash.recover(signature);
 	}
+   
+   function gasTester(
+      uint256 _destination,
+      bytes calldata _feeData
+   ) external { // This could be view, but we want it to burn gas
+      address feeToken;
+		uint256 feeAmount;
+		uint256 maxBlock;
+		bytes32 hash;
+		bytes memory signature;
+
+		(feeToken, feeAmount, maxBlock, hash, signature) = abi.decode(_feeData, (address, uint256, uint256, bytes32, bytes));
+
+      uint256 remainingGas = gasleft();
+      
+      block.number <= maxBlock;
+      
+      uint256 blockCheckGasUsed = remainingGas - gasleft();
+      
+      remainingGas = gasleft();
+
+		hash.recover(signature) == feeVerifier;
+      
+      uint256 sigCheckGasUsed = remainingGas - gasleft();
+
+      remainingGas = gasleft();
+
+		// Verify hash matches sent data
+		bytes32 computedHash = keccak256(abi.encode(
+			_msgSender(),
+			_destination,
+			feeToken,
+			feeAmount,
+			maxBlock,
+         address(0)
+		)).toEthSignedMessageHash();
+
+		hash == computedHash;
+      
+      uint256 hashCheckGasUsed = remainingGas - gasleft();
+      
+      console.log("blockCheckGasUsed: ", blockCheckGasUsed);
+      console.log("sigCheckGasUsed: ", sigCheckGasUsed);
+      console.log("hashCheckGasUsed: ", hashCheckGasUsed);
+   }
 }

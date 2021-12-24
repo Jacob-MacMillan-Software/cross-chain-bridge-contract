@@ -49,13 +49,9 @@ contract TollBridge is Bridge {
 		(feeToken, feeAmount, maxBlock, hash, signature) = abi.decode(_feeData, (address, uint256, uint256, bytes32, bytes));
 
       // This is done in order from least gas cost to highest to save gas if one of the checks fail
-      // Note that I'm just guessing the order of the last two. Still need to verify that
 
 		// Verfiy fee signature is still valid (within correct block range)
 		require(block.number <= maxBlock, "TollBridge: Fee validation expired");
-      
-		// Check that hash is signed by a valid address
-		require(hash.recover(signature) == feeVerifier, "TollBridge: Invalid validation");
 
 		// Verify hash matches sent data
 		bytes32 computedHash = keccak256(abi.encode(
@@ -68,6 +64,9 @@ contract TollBridge is Bridge {
 		)).toEthSignedMessageHash();
 
 		require(hash == computedHash, "TollBridge: Hash does not match data");
+      
+		// Check that hash is signed by a valid address
+		require(hash.recover(signature) == feeVerifier, "TollBridge: Invalid validation");
 	}
 
 	/**
