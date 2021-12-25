@@ -35,8 +35,8 @@ contract FeeVerifyTester is TollBridge {
 
 	function testVerifyFee(
 		uint256 _destination,
-      address _tokenAddress,
-      bytes calldata _feeData
+		address _tokenAddress,
+		bytes calldata _feeData
 	) external view returns (address) {
 		address feeToken;
 		uint256 feeAmount;
@@ -52,7 +52,7 @@ contract FeeVerifyTester is TollBridge {
 			feeToken,
 			feeAmount,
 			maxBlock,
-         _tokenAddress
+			_tokenAddress
 		))));
 
 		bytes32 computedHash = keccak256(abi.encode(
@@ -61,7 +61,7 @@ contract FeeVerifyTester is TollBridge {
 			feeToken,
 			feeAmount,
 			maxBlock,
-         _tokenAddress
+			_tokenAddress
 		)).toEthSignedMessageHash();
 
 		console.log(toString(computedHash));
@@ -72,12 +72,12 @@ contract FeeVerifyTester is TollBridge {
 
 		return hash.recover(signature);
 	}
-   
-   function gasTester(
-      uint256 _destination,
-      bytes calldata _feeData
-   ) external { // This could be view, but we want it to burn gas
-      address feeToken;
+
+	function gasTester(
+		uint256 _destination,
+		bytes calldata _feeData
+	) external { // This could be view, but we want it to burn gas
+		address feeToken;
 		uint256 feeAmount;
 		uint256 maxBlock;
 		bytes32 hash;
@@ -85,19 +85,19 @@ contract FeeVerifyTester is TollBridge {
 
 		(feeToken, feeAmount, maxBlock, hash, signature) = abi.decode(_feeData, (address, uint256, uint256, bytes32, bytes));
 
-      uint256 remainingGas = gasleft();
-      
-      block.number <= maxBlock;
-      
-      uint256 blockCheckGasUsed = remainingGas - gasleft();
-      
-      remainingGas = gasleft();
+		uint256 remainingGas = gasleft();
+
+		block.number <= maxBlock;
+
+		uint256 blockCheckGasUsed = remainingGas - gasleft();
+
+		remainingGas = gasleft();
 
 		hash.recover(signature) == feeVerifier;
-      
-      uint256 sigCheckGasUsed = remainingGas - gasleft();
 
-      remainingGas = gasleft();
+		uint256 sigCheckGasUsed = remainingGas - gasleft();
+
+		remainingGas = gasleft();
 
 		// Verify hash matches sent data
 		bytes32 computedHash = keccak256(abi.encode(
@@ -106,15 +106,22 @@ contract FeeVerifyTester is TollBridge {
 			feeToken,
 			feeAmount,
 			maxBlock,
-         address(0)
+			address(0)
 		)).toEthSignedMessageHash();
 
 		hash == computedHash;
-      
-      uint256 hashCheckGasUsed = remainingGas - gasleft();
-      
-      console.log("blockCheckGasUsed: ", blockCheckGasUsed);
-      console.log("sigCheckGasUsed: ", sigCheckGasUsed);
-      console.log("hashCheckGasUsed: ", hashCheckGasUsed);
-   }
+
+		uint256 hashCheckGasUsed = remainingGas - gasleft();
+
+		remainingGas = gasleft();
+
+		verifyFee(_destination, address(0), _feeData);
+
+		uint256 verifyFeeGasUsed = remainingGas - gasleft();
+
+		console.log("blockCheckGasUsed: ", blockCheckGasUsed);
+		console.log("sigCheckGasUsed: ", sigCheckGasUsed);
+		console.log("hashCheckGasUsed: ", hashCheckGasUsed);
+		console.log("verifyFeeGasUsed: ", verifyFeeGasUsed);
+	}
 }
