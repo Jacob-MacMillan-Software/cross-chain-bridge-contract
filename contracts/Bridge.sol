@@ -6,6 +6,7 @@ import "./IBridgeMixedFungible.sol";
 import "./Controllable.sol";
 import "./IERC721Bridgable.sol";
 import "./IERC1155Bridgable.sol";
+import "./IMessageReceiver.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 
@@ -42,7 +43,7 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 			id := chainid()
 		}
 		return id;
-	}*/
+	} */
 
 	/**
 	 * @dev Transfers an ERC20 token to a different chain
@@ -157,6 +158,42 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 		emit TokenClaimedMixedFungible(to, token, tokenId, amount);
 	}
 
+	function sendMessage(
+		uint256 _messageId,
+		uint256 _destination,
+		string calldata _recipient,
+		bool _receipt,
+		bytes calldata _message,
+		bytes calldata
+	) external virtual override {
+		_sendMessage(_messageId, _destination, _recipient, _receipt, _message);
+	}
+
+	function sendBroadcast(
+		uint256 _messageId,
+		bool _receipt,
+		bytes calldata _message,
+		bytes calldata
+	) external virtual override {
+		_sendBroadcast(_messageId, _receipt, _message);
+	}
+
+	function relayMessage(
+		address _recipient,
+		uint256 _messageId,
+		string calldata _sender,
+		uint256 _fromNetworkId,
+		bytes calldata _message
+	) external virtual override onlyController returns (bool success) {
+		try IMessageReceiver(_recipient).receiveBridgeMessage(_sender, _fromNetworkId, _message) returns (bool result) {
+			success = result;
+		} catch {
+			success = false;
+		}
+
+		emit MessageReceived(_recipient, success, _messageId);
+	}
+
 	function toBytes(uint256 x) internal pure returns (bytes memory b) {
 		b = new bytes(32);
 		assembly { mstore(add(b, 32), x) }
@@ -189,5 +226,23 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 		IERC1155Upgradeable(_token).safeTransferFrom(_msgSender(), address(this), _tokenId, _amount, toBytes(0));
 
 		emit TokenTransferMixedFungible(_msgSender(), _token, _tokenId, _amount, _networkId);
+	}
+
+	function _sendMessage(
+		uint256 _messageId,
+		uint256 _destination,
+		string calldata _recipient,
+		bool _receipt,
+		bytes calldata _message
+	) internal {
+		emit MessageSent(_msgSender(), _messageId, _destination, _recipient, _receipt, _message);
+	}
+
+	function _sendBroadcast(
+		uint256 _messageId,
+		bool _receipt,
+		bytes calldata _message
+	) internal {
+		emit BroadcastSent(_msgSender(), _messageId, _receipt, _message);
 	}
 }

@@ -6,6 +6,7 @@ import { deployMockContract } from "@ethereum-waffle/mock-contract";
 const IERC20 = require("../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json");
 const IERC721 = require("../artifacts/contracts/IERC721Bridgable.sol/IERC721Bridgable.json");
 const IERC1155 = require("../artifacts/contracts/IERC1155Bridgable.sol/IERC1155Bridgable.json");
+const IMessageReceiver = require("../artifacts/contracts/IMessageReceiver.sol/IMessageReceiver.json");
 
 describe("Bridge", function () {
   describe("ERC20 bridge", function () {
@@ -211,6 +212,126 @@ describe("Bridge", function () {
         expect(e.args?.token).to.equal(mockERC1155.address);
         expect(parseInt(e.args?.tokenId)).to.equal(1);
         expect(parseInt(e.args?.amount)).to.equal(100);
+      });
+    });
+  });
+
+  describe("Arbitrary message bridge", function () {
+    // @ts-ignore
+    let encodedMessage;
+    // @ts-ignore
+    let decodedMessage;
+
+    before(function () {
+      const abi = new ethers.utils.AbiCoder();
+
+      decodedMessage = {
+        types: ["string", "uint256"],
+        data: ["This is a message", 17], // 17 is the length of the message
+      };
+
+      encodedMessage = abi.encode(decodedMessage.types, decodedMessage.data);
+    });
+
+    it("Send an arbitrary message to another network", async function () {
+      const [owner, addr1] = await ethers.getSigners();
+
+      const Bridge = await ethers.getContractFactory("BridgeDeployable");
+      const bridge = await Bridge.deploy();
+      await bridge.deployed();
+
+      // Initialzie bridge
+      await bridge.initialize(owner.address);
+
+      const messageTx = await bridge.sendMessage(
+        1, // Message ID
+        100, // Destination Network
+        addr1.address, // Recipient
+        false, // Request delivery receipt
+        // @ts-ignore
+        encodedMessage, // Message
+        "0x" // Extra data
+      );
+
+      const tx = await messageTx.wait();
+
+      expect(tx.events?.length).to.equal(1);
+
+      await tx.events?.forEach((e) => {
+        expect(e.args?.from).to.equal(owner.address);
+        expect(parseInt(e.args?.messageId)).to.equal(1);
+        expect(parseInt(e.args?.destination)).to.equal(100);
+        expect(e.args?.recipient).to.equal(addr1.address);
+        expect(e.args?.receipt).to.equal(false);
+        // @ts-ignore
+        expect(e.args?.message).to.equal(encodedMessage);
+      });
+    });
+
+    it("Send an arbitrary message broadcast", async function () {
+      const [owner] = await ethers.getSigners();
+      const Bridge = await ethers.getContractFactory("BridgeDeployable");
+      const bridge = await Bridge.deploy();
+      await bridge.deployed();
+
+      // Initialzie bridge
+      await bridge.initialize(owner.address);
+
+      const broadcastTx = await bridge.sendBroadcast(
+        1, // Message ID
+        false, // Request delivery receipt
+        // @ts-ignore
+        encodedMessage, // Message
+        "0x" // Extra data
+      );
+
+      const tx = await broadcastTx.wait();
+
+      expect(tx.events?.length).to.equal(1);
+
+      await tx.events?.forEach((e) => {
+        expect(e.args?.from).to.equal(owner.address);
+        expect(parseInt(e.args?.messageId)).to.equal(1);
+        expect(e.args?.receipt).to.equal(false);
+        // @ts-ignore
+        expect(e.args?.message).to.equal(encodedMessage);
+      });
+    });
+
+    it("Simulate receiving a message", async function () {
+      const [owner] = await ethers.getSigners();
+      const Bridge = await ethers.getContractFactory("BridgeDeployable");
+      const bridge = await Bridge.deploy();
+      await bridge.deployed();
+
+      // Initialzie bridge
+      await bridge.initialize(owner.address);
+
+      // Create mock message receiver
+      const mockReceiver = await deployMockContract(
+        owner,
+        IMessageReceiver.abi
+      );
+
+      await mockReceiver.mock.receiveBridgeMessage.returns(false);
+
+      const relayTx = await bridge.relayMessage(
+        mockReceiver.address, // Recipient
+        1, // MessageId
+        owner.address, // Sender
+        100, // From network
+        // @ts-ignore
+        encodedMessage // Message
+      );
+
+      const tx = await relayTx.wait();
+
+      expect(tx.events?.length).to.equal(1);
+
+      await tx.events?.forEach((e) => {
+        expect(e.args?.receiver).to.equal(mockReceiver.address);
+        expect(e.args?.success).to.equal(false);
+        expect(e.args?.messageId).to.equal(1);
       });
     });
   });
