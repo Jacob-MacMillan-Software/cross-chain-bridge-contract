@@ -1,5 +1,5 @@
 We must also send the `block valid until` in the tx so we can verify it is correct. We're able to get the current block on chain to see if the sig has expired
 
-Format of hashed data (seperate each element with '')
+Format of hashed data
 
-Sender addr, destination network, fee token addr, fee token amount, block valid until, token contract
+chainId, Sender addr, destination network, fee token addr, fee token amount, block valid until, abi encoded data (exact data depends on transaction. See whitepaper)

@@ -37,13 +37,13 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 	/**
 	 * @dev Returns the chainId of the network this contract is deployed on
 	 */
-	/*function chainId() public view returns (uint256) {
+	function chainId() public view returns (uint256) {
 		uint256 id;
 		assembly {
 			id := chainid()
 		}
 		return id;
-	} */
+	}
 
 	/**
 	 * @dev Transfers an ERC20 token to a different chain
