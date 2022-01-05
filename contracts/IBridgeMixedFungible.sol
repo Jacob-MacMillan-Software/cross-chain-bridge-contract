@@ -12,7 +12,7 @@ interface IBridgeMixedFungible is IBridge, IERC1155ReceiverUpgradeable {
 	 * @dev Transfers an ERC1155 token to a different chain
 	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferMixedFungible` event
 	 */
-	function transferMixedFungible(address token, uint256 tokenId, uint256 amount, uint256 networkId, bytes calldata data) external;
+	function transferMixedFungible(address token, uint256 tokenId, uint256 amount, uint256 networkId, bytes calldata data) external payable;
 
 	/**
 	 * @dev Used by the bridge relay to 'transfer' a user's item to the chain
