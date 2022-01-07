@@ -37,12 +37,12 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 	 * @dev Returns the chainId of the network this contract is deployed on
 	 */
 	/*function chainId() public view returns (uint256) {
-		uint256 id;
-		assembly {
-			id := chainid()
-		}
-		return id;
-	}*/
+	  uint256 id;
+	  assembly {
+id := chainid()
+}
+return id;
+}*/
 
 	/**
 	 * @dev Transfers an ERC20 token to a different chain
@@ -53,7 +53,10 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 		uint256 amount,
 		uint256 networkId,
 		bytes calldata
-	) external virtual override {
+	) external virtual override payable {
+		// This function is only payable so it can be overriden by TollBridge. We don't want to actually except any ETH 
+		require(msg.value == 0, "Bridge: Function not payable");
+
 		_transferFungible(token, amount, networkId);
 	}
 
@@ -81,13 +84,16 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 		uint256 _tokenId,
 		uint256 _networkId,
 		bytes calldata
-	) external virtual override {
+	) external virtual override payable {
+		// This function is only payable so it can be overriden by TollBridge. We don't want to actually except any ETH 
+		require(msg.value == 0, "Bridge: Function not payable");
+
 		_transferNonFungible(_token, _tokenId, _networkId);
 	}
 
 	/**
-	 * @dev Used by bridge network to transfer the item directly to user without need for manual claiming
-	 */
+	* @dev Used by bridge network to transfer the item directly to user without need for manual claiming
+	*/
 	function bridgeClaimNonFungible(
 		address _token,
 		address _to,
@@ -125,7 +131,10 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 		uint256 _amount,
 		uint256 _networkId,
 		bytes calldata
-	) external virtual override {
+	) external virtual override payable {
+		// This function is only payable so it can be overriden by TollBridge. We don't want to actually except any ETH 
+		require(msg.value == 0, "Bridge: Function not payable");
+
 		_transferMixedFungible(_token, _tokenId, _amount, _networkId);
 	}
 
