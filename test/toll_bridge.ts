@@ -185,7 +185,10 @@ describe("Toll Bridge", function () {
         feeAmount,
         noExpireBlock,
         mockERC20.address,
-        addr1
+        null,
+        false,
+        addr1,
+        bridge
       );
 
       const transferTx = await bridge.transferFungible(
@@ -398,7 +401,10 @@ describe("Toll Bridge", function () {
         feeAmount,
         noExpireBlock,
         mockERC721.address,
-        addr1
+        null,
+        false,
+        addr1,
+        bridge
       );
 
       const transferTx = await bridge.transferNonFungible(
@@ -554,7 +560,10 @@ describe("Toll Bridge", function () {
         feeAmount,
         noExpireBlock,
         mockERC1155.address,
-        addr1
+        null,
+        false,
+        addr1,
+        bridge
       );
 
       const transferTx = await bridge.transferMixedFungible(
