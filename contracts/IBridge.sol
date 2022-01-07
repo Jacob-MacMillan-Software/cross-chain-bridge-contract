@@ -68,6 +68,7 @@ interface IBridge {
 	);
 	event MessageReceived(
 		address indexed receiver,
+		string from,
 		bool success,
 		uint256 messageId
 	);

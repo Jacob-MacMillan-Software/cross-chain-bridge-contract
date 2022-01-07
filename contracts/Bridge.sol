@@ -191,7 +191,7 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 			success = false;
 		}
 
-		emit MessageReceived(_recipient, success, _messageId);
+		emit MessageReceived(_recipient, _sender, success, _messageId);
 	}
 
 	function toBytes(uint256 x) internal pure returns (bytes memory b) {

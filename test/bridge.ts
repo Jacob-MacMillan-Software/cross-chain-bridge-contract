@@ -329,6 +329,7 @@ describe("Bridge", function () {
       expect(tx.events?.length).to.equal(1);
 
       await tx.events?.forEach((e) => {
+        expect(e.args?.from).to.equal(owner.address);
         expect(e.args?.receiver).to.equal(mockReceiver.address);
         expect(e.args?.success).to.equal(false);
         expect(e.args?.messageId).to.equal(1);
