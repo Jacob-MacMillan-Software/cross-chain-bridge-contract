@@ -9,7 +9,7 @@ interface IBridge {
 	 * @dev Transfers an ERC20 token to a different chain
 	 * This function simply moves the caller's tokens to this contract, and emits a `TokenTransferFungible` event
 	 */
-	function transferFungible(address token, uint256 amount, uint256 networkId, bytes calldata data) external;
+	function transferFungible(address token, uint256 amount, uint256 networkId, bytes calldata data) external payable;
 
 	/**
 	 * @dev Used by the bridge relay to 'transfer' a user's item to the chain

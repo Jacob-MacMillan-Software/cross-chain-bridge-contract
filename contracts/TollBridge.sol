@@ -2,12 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "./Bridge.sol";
 
 contract TollBridge is Bridge {
 	using ECDSAUpgradeable for bytes32;
 	using ECDSAUpgradeable for bytes;
+	using AddressUpgradeable for address payable;
 
 	// Fees that have been paid and can be withdrawn from this contract
 	mapping (address => uint256) public pendingFees;
@@ -79,7 +80,7 @@ contract TollBridge is Bridge {
 	   uint256 _amount,
 		uint256 _networkId,
 		bytes calldata _feeData
-	) external virtual override {
+	) external virtual override payable {
       verifyFee(_networkId, abi.encode(_token), _feeData);
 	
 		_transferFungible(_token, _amount, _networkId);
@@ -96,7 +97,7 @@ contract TollBridge is Bridge {
 		uint256 _tokenId,
 		uint256 _networkId,
 		bytes calldata _feeData
-	) external virtual override {
+	) external virtual override payable {
 		// require(networkId != chainId(), "Same chainId");
       verifyFee(_networkId, abi.encode(_token), _feeData);
 		
@@ -115,7 +116,7 @@ contract TollBridge is Bridge {
 		uint256 _amount,
 		uint256 _networkId,
 		bytes calldata _feeData
-	) external virtual override {
+	) external virtual override payable {
 		// require(networkId != chainId(), "Same chainId");
       verifyFee(_networkId, abi.encode(_token), _feeData);
 		
@@ -157,7 +158,12 @@ contract TollBridge is Bridge {
 	function withdrawalFees(address _token, uint256 _amount) external virtual onlyController {
 		require(pendingFees[_token] >= _amount, "Insufficient funds");
 		pendingFees[_token] -= _amount;
-		IERC20Upgradeable(_token).transfer(_msgSender(), _amount);
+
+		if(_token == address(0)) {
+			payable(_msgSender()).sendValue(_amount);
+		} else {
+			IERC20Upgradeable(_token).transfer(_msgSender(), _amount);
+		}
 	}
 
 	/**
@@ -169,9 +175,17 @@ contract TollBridge is Bridge {
 
 		(token, fee,,, ) = abi.decode(_feeData, (address, uint256, uint256, bytes32, bytes));
 
-		if(fee > 0) {
+		// token == address(0) is used to indicate fee will be payed in base network currency (ie. ETH on Ethereum, etc.)
+		if(token == address(0) && fee > 0) {
+			require(msg.value == fee, "TollBridge: Incorrect fee paid");
+		} else if(fee > 0) {
+			// Only make payable if the fee is in base network currency
+			require(msg.value == 0, "TollBridge: Function not payable");
 			pendingFees[token] += fee;
 			IERC20Upgradeable(token).transferFrom(_msgSender(), address(this), fee);
+		} else /* fee == 0 */ {
+			// Only make payable if the fee is in base network currency
+			require(msg.value == 0, "TollBridge: Function not payable");
 		}
 	}
 }
