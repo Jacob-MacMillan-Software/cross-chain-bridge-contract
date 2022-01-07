@@ -63,7 +63,10 @@ describe("Fee Verification Signature", function () {
 
     const result = await bridge.testVerifyFee(
       dest,
-      testMessage,
+      abi.encode(
+        ["bytes", "bool", "string"],
+        [testMessage, true, mockERC20.address]
+      ),
       abi.encode(
         ["address", "uint256", "uint256", "bytes32", "bytes"],
         [feeToken, feeAmount, maxBlock, hash, signature]

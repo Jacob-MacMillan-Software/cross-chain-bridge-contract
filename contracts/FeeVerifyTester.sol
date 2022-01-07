@@ -34,8 +34,8 @@ contract FeeVerifyTester is TollBridge {
 	}
 
 	function testVerifyFee(
-		uint256 _destination,
-		bytes calldata _message,
+      uint256 _destination,
+		bytes calldata _encodedMessage,
 		bytes calldata _feeData
 	) external view returns (address) {
 		address feeToken;
@@ -46,7 +46,7 @@ contract FeeVerifyTester is TollBridge {
 
 		(feeToken, feeAmount, maxBlock, hash, signature) = abi.decode(_feeData, (address, uint256, uint256, bytes32, bytes));
 
-		bytes memory messageWithReceipt = abi.encode(_message, true, feeToken);
+		bytes memory messageWithReceipt = _encodedMessage;
 
 		console.log(toString(keccak256(abi.encode(
 			chainId(),
