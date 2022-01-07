@@ -1,6 +1,9 @@
 import { ethers } from "hardhat";
 
+const zeroAddress = "0x0000000000000000000000000000000000000000";
+
 export async function generateHashedMessage(
+  chainId: number,
   // @ts-ignore
   sender, // @ts-ignore
   destination, // @ts-ignore
@@ -8,19 +11,51 @@ export async function generateHashedMessage(
   feeAmount, // @ts-ignore
   maxBlock, // @ts-ignore
   tokenAddr, // @ts-ignore
+  messageData,
+  requestReceipt: boolean, // @ts-ignore
   signer
 ) {
   const abi = new ethers.utils.AbiCoder();
 
+  // Pack message with tokenAddress and requestReciept
+  // @ts-ignore
+  let packedMessage;
+
+  if (!messageData || messageData === "0x") {
+    // console.log("Packing in token mode");
+    packedMessage = abi.encode(["address"], [tokenAddr]);
+  } else if (tokenAddr !== zeroAddress && tokenAddr) {
+    // console.log("Packing in message mode");
+    packedMessage = abi.encode(
+      ["bytes", "bool", "string"],
+      [messageData, requestReceipt, tokenAddr]
+    );
+  } else {
+    // console.log("Packing in broadcast mode");
+    packedMessage = abi.encode(
+      ["bytes", "bool"],
+      [messageData, requestReceipt]
+    );
+  }
+
   const types = [
-    "address",
     "uint256",
     "address",
     "uint256",
-    "uint256",
     "address",
+    "uint256",
+    "uint256",
+    "bytes",
   ];
-  const data = [sender, destination, feeToken, feeAmount, maxBlock, tokenAddr];
+  const data = [
+    chainId,
+    sender,
+    destination,
+    feeToken,
+    feeAmount,
+    maxBlock,
+    packedMessage,
+  ];
 
   const abiEncoded = abi.encode(types, data);
 
@@ -56,15 +91,28 @@ export async function generateFeeData(
   feeAmount, // @ts-ignore
   maxBlock, // @ts-ignore
   tokenAddr, // @ts-ignore
-  signer
+  messageData,
+  requestReceipt: boolean, // @ts-ignore
+  signer, // @ts-ignore
+  contract // Can just be any contract that has a function called 'chainId' that returns the chainId, this can also just be a number
 ) {
+  let chainId: number;
+  if (typeof contract === "number") {
+    chainId = contract;
+  } else {
+    chainId = await contract.chainId();
+  }
+
   const [hash, signature] = await generateHashedMessage(
+    chainId,
     sender,
     destination,
     feeToken,
     feeAmount,
     maxBlock,
     tokenAddr,
+    messageData,
+    requestReceipt,
     signer
   );
 

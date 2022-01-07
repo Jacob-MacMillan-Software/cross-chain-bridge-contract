@@ -9,6 +9,7 @@ import { generateFeeData } from "./helpers/messageSigning";
 const IERC20 = require("../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json");
 const IERC721 = require("../artifacts/contracts/IERC721Bridgable.sol/IERC721Bridgable.json");
 const IERC1155 = require("../artifacts/contracts/IERC1155Bridgable.sol/IERC1155Bridgable.json");
+const IMessageReceiver = require("../artifacts/contracts/IMessageReceiver.sol/IMessageReceiver.json");
 
 describe("Toll Bridge", function () {
   const zeroAddress = "0x0000000000000000000000000000000000000000";
@@ -54,7 +55,10 @@ describe("Toll Bridge", function () {
         0,
         noExpireBlock,
         mockERC20.address,
-        addr1
+        "0x",
+        false,
+        addr1,
+        bridge
       );
 
       // Transfer a token to network 2
@@ -138,7 +142,10 @@ describe("Toll Bridge", function () {
         feeAmount,
         noExpireBlock,
         mockERC20.address,
-        addr1
+        "0x",
+        false,
+        addr1,
+        bridge
       );
 
       let pass: boolean = false;
@@ -178,7 +185,10 @@ describe("Toll Bridge", function () {
         feeAmount,
         noExpireBlock,
         mockERC20.address,
-        addr1
+        null,
+        false,
+        addr1,
+        bridge
       );
 
       const transferTx = await bridge.transferFungible(
@@ -228,7 +238,10 @@ describe("Toll Bridge", function () {
         0,
         noExpireBlock,
         mockERC721.address,
-        addr1
+        "0x",
+        false,
+        addr1,
+        bridge
       );
 
       // Transfer a token to network 2
@@ -340,7 +353,10 @@ describe("Toll Bridge", function () {
         feeAmount,
         noExpireBlock,
         mockERC721.address,
-        addr1
+        "0x",
+        false,
+        addr1,
+        bridge
       );
 
       // We'll use this to verify the fee is being taken
@@ -385,7 +401,10 @@ describe("Toll Bridge", function () {
         feeAmount,
         noExpireBlock,
         mockERC721.address,
-        addr1
+        null,
+        false,
+        addr1,
+        bridge
       );
 
       const transferTx = await bridge.transferNonFungible(
@@ -435,7 +454,10 @@ describe("Toll Bridge", function () {
         0,
         noExpireBlock,
         mockERC1155.address,
-        addr1
+        "0x",
+        false,
+        addr1,
+        bridge
       );
 
       // Transfer a token to network 2
@@ -490,7 +512,10 @@ describe("Toll Bridge", function () {
         feeAmount,
         noExpireBlock,
         mockERC1155.address,
-        addr1
+        "0x",
+        false,
+        addr1,
+        bridge
       );
 
       let pass: boolean = false;
@@ -535,7 +560,10 @@ describe("Toll Bridge", function () {
         feeAmount,
         noExpireBlock,
         mockERC1155.address,
-        addr1
+        null,
+        false,
+        addr1,
+        bridge
       );
 
       const transferTx = await bridge.transferMixedFungible(
@@ -591,6 +619,162 @@ describe("Toll Bridge", function () {
         expect(e.args?.token).to.equal(mockERC1155.address);
         expect(parseInt(e.args?.tokenId)).to.equal(1);
         expect(parseInt(e.args?.amount)).to.equal(100);
+      });
+    });
+  });
+
+  describe("Arbitrary message bridge", function () {
+    // @ts-ignore
+    let encodedMessage;
+    // @ts-ignore
+    let decodedMessage;
+
+    before(function () {
+      const abi = new ethers.utils.AbiCoder();
+
+      decodedMessage = {
+        types: ["string", "uint256"],
+        data: ["This is a message", 17], // 17 is the length of the message
+      };
+
+      encodedMessage = abi.encode(decodedMessage.types, decodedMessage.data);
+    });
+
+    it("Send an arbitrary message to another network", async function () {
+      const [owner, addr1] = await ethers.getSigners();
+
+      const Bridge = await ethers.getContractFactory("TollBridge");
+      const bridge = await upgrades.deployProxy(Bridge, [
+        owner.address,
+        addr1.address,
+      ]);
+      await bridge.deployed();
+
+      // Generate fee verification
+      const feeData = await generateFeeData(
+        owner.address,
+        100,
+        tollToken.address,
+        feeAmount,
+        noExpireBlock,
+        addr1.address,
+        // @ts-ignore
+        encodedMessage,
+        false,
+        addr1,
+        bridge
+      );
+
+      const messageTx = await bridge.sendMessage(
+        1, // Message ID
+        100, // Destination Network
+        addr1.address, // Recipient
+        false, // Request delivery receipt
+        // @ts-ignore
+        encodedMessage, // Message
+        feeData
+      );
+
+      const tx = await messageTx.wait();
+
+      expect(tx.events?.length).to.equal(1);
+
+      // @ts-ignore
+      await tx.events?.forEach((e) => {
+        expect(e.args?.from).to.equal(owner.address);
+        expect(parseInt(e.args?.messageId)).to.equal(1);
+        expect(parseInt(e.args?.destination)).to.equal(100);
+        expect(e.args?.recipient).to.equal(addr1.address);
+        expect(e.args?.receipt).to.equal(false);
+        // @ts-ignore
+        expect(e.args?.message).to.equal(encodedMessage);
+      });
+    });
+
+    it("Send an arbitrary message broadcast", async function () {
+      const [owner, addr1] = await ethers.getSigners();
+
+      const Bridge = await ethers.getContractFactory("TollBridge");
+      const bridge = await upgrades.deployProxy(Bridge, [
+        owner.address,
+        addr1.address,
+      ]);
+      await bridge.deployed();
+
+      // Generate fee verification
+      const feeData = await generateFeeData(
+        owner.address,
+        0,
+        tollToken.address,
+        feeAmount,
+        noExpireBlock,
+        zeroAddress,
+        // @ts-ignore
+        encodedMessage,
+        false,
+        addr1,
+        bridge
+      );
+
+      const broadcastTx = await bridge.sendBroadcast(
+        1, // Message ID
+        false, // Request delivery receipt
+        // @ts-ignore
+        encodedMessage, // Message
+        feeData
+      );
+
+      const tx = await broadcastTx.wait();
+
+      expect(tx.events?.length).to.equal(1);
+
+      // @ts-ignore
+      await tx.events?.forEach((e) => {
+        expect(e.args?.from).to.equal(owner.address);
+        expect(parseInt(e.args?.messageId)).to.equal(1);
+        expect(e.args?.receipt).to.equal(false);
+        // @ts-ignore
+        expect(e.args?.message).to.equal(encodedMessage);
+      });
+    });
+
+    it("Simulate receiving a message", async function () {
+      const [owner, addr1] = await ethers.getSigners();
+
+      const Bridge = await ethers.getContractFactory("TollBridge");
+      const bridge = await upgrades.deployProxy(Bridge, [
+        owner.address,
+        addr1.address,
+      ]);
+      await bridge.deployed();
+
+      // Create mock message receiver
+      const mockReceiver = await deployMockContract(
+        owner,
+        IMessageReceiver.abi
+      );
+
+      await mockReceiver.mock.receiveBridgeMessage.returns(false);
+
+      const relayTx = await bridge.relayMessage(
+        mockReceiver.address, // Recipient
+        1, // MessageId
+        owner.address, // Sender
+        100, // From network
+        // @ts-ignore
+        encodedMessage // Message
+      );
+
+      const tx = await relayTx.wait();
+
+      expect(tx.events?.length).to.equal(1);
+
+      // @ts-ignore
+      await tx.events?.forEach((e) => {
+        expect(e.args?.from).to.equal(owner.address);
+        expect(e.args?.receiver).to.equal(mockReceiver.address);
+        expect(e.args?.success).to.equal(false);
+        expect(e.args?.messageId).to.equal(1);
       });
     });
   });

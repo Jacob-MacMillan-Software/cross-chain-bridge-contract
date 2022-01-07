@@ -11,6 +11,8 @@ const zeroAddress = "0x0000000000000000000000000000000000000000";
 const IERC20 = require("../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json");
 const abi = new ethers.utils.AbiCoder();
 
+const testMessage = abi.encode(["string"], ["test"]);
+
 describe("Fee Verification Signature", function () {
   it("Verify a valid signature", async function () {
     const [owner, addr1] = await ethers.getSigners();
@@ -28,6 +30,8 @@ describe("Fee Verification Signature", function () {
     ]);
     await bridge.deployed();
 
+    const chainId = await bridge.chainId();
+
     await bridge.setFeeVerifier(addr1.address);
 
     const verifier = await bridge.feeVerifier();
@@ -37,18 +41,21 @@ describe("Fee Verification Signature", function () {
     console.log(`Verifier: ${verifier}, owner: ${owner.address}`);
 
     // Create signed message
-    const dest = 1;
+    const dest = 100;
     const feeToken = mockERC20.address;
     const feeAmount = 100;
     const maxBlock = 99999999999;
 
     const [hash, signature] = await generateHashedMessage(
+      chainId,
       owner.address,
       dest,
       feeToken,
       feeAmount,
       maxBlock,
       mockERC20.address,
+      testMessage,
+      true,
       addr1
     );
 
@@ -56,7 +63,10 @@ describe("Fee Verification Signature", function () {
 
     const result = await bridge.testVerifyFee(
       dest,
-      feeToken,
+      abi.encode(
+        ["bytes", "bool", "string"],
+        [testMessage, true, mockERC20.address]
+      ),
       abi.encode(
         ["address", "uint256", "uint256", "bytes32", "bytes"],
         [feeToken, feeAmount, maxBlock, hash, signature]
@@ -82,6 +92,8 @@ describe("Fee Verification Signature", function () {
     ]);
     await bridge.deployed();
 
+    const chainId = await bridge.chainId();
+
     await bridge.setFeeVerifier(addr1.address);
 
     const verifier = await bridge.feeVerifier();
@@ -91,18 +103,21 @@ describe("Fee Verification Signature", function () {
     console.log(`Verifier: ${verifier}, owner: ${owner.address}`);
 
     // Create signed message
-    const dest = 1;
+    const dest = 100;
     const feeToken = mockERC20.address;
     const feeAmount = 100;
     const maxBlock = 0;
 
     const [hash, signature] = await generateHashedMessage(
+      chainId,
       owner.address,
       dest,
       feeToken,
       feeAmount,
       maxBlock,
       mockERC20.address,
+      testMessage,
+      true,
       addr1
     );
 
@@ -112,7 +127,7 @@ describe("Fee Verification Signature", function () {
     try {
       await bridge.testVerifyFee(
         dest,
-        feeToken,
+        testMessage,
         abi.encode(
           ["address", "uint256", "uint256", "bytes32", "bytes"],
           [feeToken, feeAmount, maxBlock, hash, signature]
@@ -153,24 +168,29 @@ describe("Fee Verification Signature", function () {
     ]);
     await bridge.deployed();
 
+    const chainId = await bridge.chainId();
+
     // Create signed message
-    const dest = 1;
+    const dest = 100;
     const feeToken = mockERC20.address;
     const feeAmount = 100;
     const maxBlock = 99999999999;
 
     const [hash, signature] = await generateHashedMessage(
+      chainId,
       owner.address,
       dest,
       feeToken,
       feeAmount,
       maxBlock,
       zeroAddress,
+      testMessage,
+      true,
       addr1
     );
 
     await bridge.gasTester(
-      dest,
+      testMessage,
       abi.encode(
         ["address", "uint256", "uint256", "bytes32", "bytes"],
         [feeToken, feeAmount, maxBlock, hash, signature]
