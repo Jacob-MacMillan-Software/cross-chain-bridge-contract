@@ -27,7 +27,7 @@ interface IBridge {
 		bool receipt,
 		bytes calldata message,
 		bytes calldata data
-	) external;
+	) external payable;
 
 	/**
 	 * @dev Used to send arbitrary messages to all other contracts within the same project as sender
@@ -38,7 +38,7 @@ interface IBridge {
 		bool receipt,
 		bytes calldata message,
 		bytes calldata data
-	) external;
+	) external payable;
 
 	/**
 	 * @dev Relay message from another network. MUST only be callable by bridge network

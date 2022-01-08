@@ -132,7 +132,7 @@ contract TollBridge is Bridge {
 		bool _receipt,
 		bytes calldata _message,
 		bytes calldata _feeData
-	) external virtual override {
+	) external virtual override payable {
 		verifyFee(_destination, abi.encode(_message, _receipt, _recipient), _feeData);
 
 		_sendMessage(_messageId, _destination, _recipient, _receipt, _message);
@@ -145,7 +145,7 @@ contract TollBridge is Bridge {
 		bool _receipt,
 		bytes calldata _message,
 		bytes calldata _feeData
-	) external virtual override {
+	) external virtual override payable {
 		verifyFee(0, abi.encode(_message, _receipt), _feeData);
 
 		_sendBroadcast(_messageId, _receipt, _message);
