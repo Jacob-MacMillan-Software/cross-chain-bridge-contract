@@ -53,7 +53,7 @@ describe("Fee Verification Signature", function () {
       feeToken,
       feeAmount,
       maxBlock,
-      mockERC20.address,
+      { tokenAddr: mockERC20.address, tokenId: null, tokenAmount: null },
       testMessage,
       true,
       addr1
@@ -115,7 +115,7 @@ describe("Fee Verification Signature", function () {
       feeToken,
       feeAmount,
       maxBlock,
-      mockERC20.address,
+      { tokenAddr: mockERC20.address, tokenId: null, tokenAmount: null },
       testMessage,
       true,
       addr1
@@ -183,7 +183,7 @@ describe("Fee Verification Signature", function () {
       feeToken,
       feeAmount,
       maxBlock,
-      zeroAddress,
+      { tokenAddr: zeroAddress, tokenId: null, tokenAmount: null },
       testMessage,
       true,
       addr1
