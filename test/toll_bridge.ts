@@ -708,7 +708,7 @@ describe("Toll Bridge", function () {
         zeroAddress,
         feeAmount,
         noExpireBlock,
-        addr1.address,
+        { tokenAddr: addr1.address },
         // @ts-ignore
         encodedMessage,
         false,
@@ -760,7 +760,7 @@ describe("Toll Bridge", function () {
         tollToken.address,
         feeAmount,
         noExpireBlock,
-        zeroAddress,
+        { tokenAddr: zeroAddress },
         // @ts-ignore
         encodedMessage,
         false,
@@ -807,7 +807,7 @@ describe("Toll Bridge", function () {
         zeroAddress,
         feeAmount,
         noExpireBlock,
-        zeroAddress,
+        { tokenAddr: zeroAddress },
         // @ts-ignore
         encodedMessage,
         false,
