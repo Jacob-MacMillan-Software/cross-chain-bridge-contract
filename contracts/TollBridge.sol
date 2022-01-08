@@ -81,7 +81,7 @@ contract TollBridge is Bridge {
 		uint256 _networkId,
 		bytes calldata _feeData
 	) external virtual override payable {
-      verifyFee(_networkId, abi.encode(_token), _feeData);
+      verifyFee(_networkId, abi.encode(_token, _amount), _feeData);
 	
 		_transferFungible(_token, _amount, _networkId);
 
@@ -99,7 +99,7 @@ contract TollBridge is Bridge {
 		bytes calldata _feeData
 	) external virtual override payable {
 		// require(networkId != chainId(), "Same chainId");
-      verifyFee(_networkId, abi.encode(_token), _feeData);
+      verifyFee(_networkId, abi.encode(_token, _tokenId), _feeData);
 		
 		_transferNonFungible(_token, _tokenId, _networkId);
 
@@ -118,7 +118,7 @@ contract TollBridge is Bridge {
 		bytes calldata _feeData
 	) external virtual override payable {
 		// require(networkId != chainId(), "Same chainId");
-      verifyFee(_networkId, abi.encode(_token), _feeData);
+      verifyFee(_networkId, abi.encode(_token, _tokenId, _amount), _feeData);
 		
 		_transferMixedFungible(_token, _tokenId, _amount, _networkId);
 
