@@ -174,7 +174,10 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 		bool _receipt,
 		bytes calldata _message,
 		bytes calldata
-	) external virtual override {
+	) external virtual override payable {
+		// This function is only payable so it can be overriden by TollBridge. We don't want to actually except any ETH 
+		require(msg.value == 0, "Bridge: Function not payable");
+
 		_sendMessage(_messageId, _destination, _recipient, _receipt, _message);
 	}
 
@@ -183,7 +186,10 @@ contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC11
 		bool _receipt,
 		bytes calldata _message,
 		bytes calldata
-	) external virtual override {
+	) external virtual override payable {
+		// This function is only payable so it can be overriden by TollBridge. We don't want to actually except any ETH 
+		require(msg.value == 0, "Bridge: Function not payable");
+
 		_sendBroadcast(_messageId, _receipt, _message);
 	}
 

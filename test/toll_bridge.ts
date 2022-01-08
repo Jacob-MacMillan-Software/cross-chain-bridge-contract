@@ -691,7 +691,59 @@ describe("Toll Bridge", function () {
       });
     });
 
-    it("Send an arbitrary message broadcast", async function () {
+    it("Send an arbitrary message to another network with ETH fee", async function () {
+      const [owner, addr1] = await ethers.getSigners();
+
+      const Bridge = await ethers.getContractFactory("TollBridge");
+      const bridge = await upgrades.deployProxy(Bridge, [
+        owner.address,
+        addr1.address,
+      ]);
+      await bridge.deployed();
+
+      // Generate fee verification
+      const feeData = await generateFeeData(
+        owner.address,
+        100,
+        zeroAddress,
+        feeAmount,
+        noExpireBlock,
+        { tokenAddr: addr1.address },
+        // @ts-ignore
+        encodedMessage,
+        false,
+        addr1,
+        bridge
+      );
+
+      const messageTx = await bridge.sendMessage(
+        1, // Message ID
+        100, // Destination Network
+        addr1.address, // Recipient
+        false, // Request delivery receipt
+        // @ts-ignore
+        encodedMessage, // Message
+        feeData,
+        { value: feeAmount }
+      );
+
+      const tx = await messageTx.wait();
+
+      expect(tx.events?.length).to.equal(1);
+
+      // @ts-ignore
+      await tx.events?.forEach((e) => {
+        expect(e.args?.from).to.equal(owner.address);
+        expect(parseInt(e.args?.messageId)).to.equal(1);
+        expect(parseInt(e.args?.destination)).to.equal(100);
+        expect(e.args?.recipient).to.equal(addr1.address);
+        expect(e.args?.receipt).to.equal(false);
+        // @ts-ignore
+        expect(e.args?.message).to.equal(encodedMessage);
+      });
+    });
+
+    it("Send an arbitrary message broadcast with ERC-20 fee", async function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
@@ -708,7 +760,7 @@ describe("Toll Bridge", function () {
         tollToken.address,
         feeAmount,
         noExpireBlock,
-        zeroAddress,
+        { tokenAddr: zeroAddress },
         // @ts-ignore
         encodedMessage,
         false,
@@ -722,6 +774,54 @@ describe("Toll Bridge", function () {
         // @ts-ignore
         encodedMessage, // Message
         feeData
+      );
+
+      const tx = await broadcastTx.wait();
+
+      expect(tx.events?.length).to.equal(1);
+
+      // @ts-ignore
+      await tx.events?.forEach((e) => {
+        expect(e.args?.from).to.equal(owner.address);
+        expect(parseInt(e.args?.messageId)).to.equal(1);
+        expect(e.args?.receipt).to.equal(false);
+        // @ts-ignore
+        expect(e.args?.message).to.equal(encodedMessage);
+      });
+    });
+
+    it("Send an arbitrary message broadcast with ETH fee", async function () {
+      const [owner, addr1] = await ethers.getSigners();
+
+      const Bridge = await ethers.getContractFactory("TollBridge");
+      const bridge = await upgrades.deployProxy(Bridge, [
+        owner.address,
+        addr1.address,
+      ]);
+      await bridge.deployed();
+
+      // Generate fee verification
+      const feeData = await generateFeeData(
+        owner.address,
+        0,
+        zeroAddress,
+        feeAmount,
+        noExpireBlock,
+        { tokenAddr: zeroAddress },
+        // @ts-ignore
+        encodedMessage,
+        false,
+        addr1,
+        bridge
+      );
+
+      const broadcastTx = await bridge.sendBroadcast(
+        1, // Message ID
+        false, // Request delivery receipt
+        // @ts-ignore
+        encodedMessage, // Message
+        feeData,
+        { value: feeAmount }
       );
 
       const tx = await broadcastTx.wait();
