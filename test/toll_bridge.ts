@@ -54,7 +54,7 @@ describe("Toll Bridge", function () {
         fakeFeeTokenAddr,
         0,
         noExpireBlock,
-        mockERC20.address,
+        { tokenAddr: mockERC20.address, tokenAmount: 100 },
         "0x",
         false,
         addr1,
@@ -141,7 +141,7 @@ describe("Toll Bridge", function () {
         tollToken.address,
         feeAmount,
         noExpireBlock,
-        mockERC20.address,
+        { tokenAddr: mockERC20.address, tokenAmount: 100 },
         "0x",
         false,
         addr1,
@@ -184,7 +184,7 @@ describe("Toll Bridge", function () {
         zeroAddress,
         feeAmount,
         noExpireBlock,
-        mockERC20.address,
+        { tokenAddr: mockERC20.address, tokenAmount: 100 },
         null,
         false,
         addr1,
@@ -237,7 +237,7 @@ describe("Toll Bridge", function () {
         tollToken.address,
         0,
         noExpireBlock,
-        mockERC721.address,
+        { tokenAddr: mockERC721.address, tokenId: 1 },
         "0x",
         false,
         addr1,
@@ -352,7 +352,7 @@ describe("Toll Bridge", function () {
         tollToken.address,
         feeAmount,
         noExpireBlock,
-        mockERC721.address,
+        { tokenAddr: mockERC721.address, tokenId: 1 },
         "0x",
         false,
         addr1,
@@ -400,7 +400,7 @@ describe("Toll Bridge", function () {
         zeroAddress,
         feeAmount,
         noExpireBlock,
-        mockERC721.address,
+        { tokenAddr: mockERC721.address, tokenId: 1 },
         null,
         false,
         addr1,
@@ -453,7 +453,7 @@ describe("Toll Bridge", function () {
         tollToken.address,
         0,
         noExpireBlock,
-        mockERC1155.address,
+        { tokenAddr: mockERC1155.address, tokenId: 1, tokenAmount: 100 },
         "0x",
         false,
         addr1,
@@ -511,7 +511,7 @@ describe("Toll Bridge", function () {
         tollToken.address,
         feeAmount,
         noExpireBlock,
-        mockERC1155.address,
+        { tokenAddr: mockERC1155.address, tokenId: 1, tokenAmount: 100 },
         "0x",
         false,
         addr1,
@@ -559,7 +559,7 @@ describe("Toll Bridge", function () {
         zeroAddress,
         feeAmount,
         noExpireBlock,
-        mockERC1155.address,
+        { tokenAddr: mockERC1155.address, tokenId: 1, tokenAmount: 100 },
         null,
         false,
         addr1,
@@ -640,7 +640,7 @@ describe("Toll Bridge", function () {
       encodedMessage = abi.encode(decodedMessage.types, decodedMessage.data);
     });
 
-    it("Send an arbitrary message to another network", async function () {
+    it("Send an arbitrary message to another network with ERC-20 fee", async function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
@@ -657,7 +657,7 @@ describe("Toll Bridge", function () {
         tollToken.address,
         feeAmount,
         noExpireBlock,
-        addr1.address,
+        { tokenAddr: addr1.address },
         // @ts-ignore
         encodedMessage,
         false,

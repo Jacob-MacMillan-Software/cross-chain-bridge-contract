@@ -10,7 +10,7 @@ export async function generateHashedMessage(
   feeToken, // @ts-ignore
   feeAmount, // @ts-ignore
   maxBlock, // @ts-ignore
-  tokenAddr, // @ts-ignore
+  { tokenAddr, tokenId, tokenAmount }, // @ts-ignore
   messageData,
   requestReceipt: boolean, // @ts-ignore
   signer
@@ -23,7 +23,19 @@ export async function generateHashedMessage(
 
   if (!messageData || messageData === "0x") {
     // console.log("Packing in token mode");
-    packedMessage = abi.encode(["address"], [tokenAddr]);
+    if (tokenId && tokenAmount) {
+      packedMessage = abi.encode(
+        ["address", "uint256", "uint256"],
+        [tokenAddr, tokenId, tokenAmount]
+      );
+    } else if (tokenId) {
+      packedMessage = abi.encode(["address", "uint256"], [tokenAddr, tokenId]);
+    } else if (tokenAmount) {
+      packedMessage = abi.encode(
+        ["address", "uint256"],
+        [tokenAddr, tokenAmount]
+      );
+    }
   } else if (tokenAddr !== zeroAddress && tokenAddr) {
     // console.log("Packing in message mode");
     packedMessage = abi.encode(
@@ -90,7 +102,7 @@ export async function generateFeeData(
   feeToken, // @ts-ignore
   feeAmount, // @ts-ignore
   maxBlock, // @ts-ignore
-  tokenAddr, // @ts-ignore
+  tokenData, // @ts-ignore
   messageData,
   requestReceipt: boolean, // @ts-ignore
   signer, // @ts-ignore
@@ -110,7 +122,7 @@ export async function generateFeeData(
     feeToken,
     feeAmount,
     maxBlock,
-    tokenAddr,
+    tokenData,
     messageData,
     requestReceipt,
     signer
