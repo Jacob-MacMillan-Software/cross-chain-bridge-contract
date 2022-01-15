@@ -1,8 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./IBridgeNonFungible.sol";
-import "./IBridgeMixedFungible.sol";
+import "./IBridgeComplete.sol";
 import "./Controllable.sol";
 import "./IERC721Bridgable.sol";
 import "./IERC1155Bridgable.sol";
@@ -10,7 +9,7 @@ import "./IMessageReceiver.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
 
-contract Bridge is IBridgeNonFungible, IBridgeMixedFungible, Controllable, ERC1155HolderUpgradeable {
+contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable {
 	/**
 	 * @notice Stores how many of each token each user has a claim to
 	 * mapping is as follows: user's address => token contract address => amount of token
