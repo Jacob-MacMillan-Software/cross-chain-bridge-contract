@@ -16,12 +16,10 @@ async function main() {
   // We get the contract to deploy
   const [owner] = await ethers.getSigners();
 
-  const { TOLL_TOKEN_ADDRESS } = process.env;
-
   const Bridge = await ethers.getContractFactory("TollBridge");
   const bridge = await upgrades.deployProxy(Bridge, [
     owner.address,
-    TOLL_TOKEN_ADDRESS,
+    owner.address,
   ]);
   await bridge.deployed();
 

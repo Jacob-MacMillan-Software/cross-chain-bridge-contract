@@ -8,8 +8,9 @@ import "./IERC1155Bridgable.sol";
 import "./IMessageReceiver.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/utils/ERC721HolderUpgradeable.sol";
 
-contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable {
+contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC721HolderUpgradeable {
 	/**
 	 * @notice Stores how many of each token each user has a claim to
 	 * mapping is as follows: user's address => token contract address => amount of token
@@ -112,7 +113,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable {
 		// If the token exists, and the owner is this contract, it will be sent like normal
 		// Otherwise this contract will revert
 		if(tokenOwner == address(0)) {
-			IERC721Bridgable(_token).bridgeMint(_msgSender(), _tokenId);
+			IERC721Bridgable(_token).bridgeMint(_to, _tokenId);
 		} else {
 			// This will revert if the bridge does not own the token; this is intended
 			IERC721Bridgable(_token).transferFrom(address(this), _to, _tokenId);
