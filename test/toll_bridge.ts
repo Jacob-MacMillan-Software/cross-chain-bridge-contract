@@ -861,6 +861,7 @@ describe("Toll Bridge", function () {
         1, // MessageId
         owner.address, // Sender
         100, // From network
+        true, // Request receipt
         // @ts-ignore
         encodedMessage // Message
       );
@@ -875,6 +876,7 @@ describe("Toll Bridge", function () {
         expect(e.args?.receiver).to.equal(mockReceiver.address);
         expect(e.args?.success).to.equal(false);
         expect(e.args?.messageId).to.equal(1);
+        expect(e.args?.receipt).to.equal(true);
       });
     });
   });

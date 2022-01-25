@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./IMessageReceiver.sol";
+
 /**
  * @dev Interface for bridge contract
  */
@@ -34,10 +36,11 @@ interface IBridge {
 	 * MUST emit `MessageReceived` event
 	 */
 	function relayMessage(
-		address recipient,
+		IMessageReceiver recipient,
 		uint256 messageId,
 		string calldata sender,
 		uint256 fromNetworkId,
+		bool receipt,
 		bytes calldata message
 	) external returns (bool);
 
@@ -56,9 +59,10 @@ interface IBridge {
 		bytes message
 	);
 	event MessageReceived(
-		address indexed receiver,
+		IMessageReceiver indexed receiver,
 		string from,
 		bool success,
-		uint256 messageId
+		uint256 messageId,
+		bool receipt
 	);
 }
