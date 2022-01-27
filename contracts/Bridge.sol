@@ -194,19 +194,20 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 	}
 
 	function relayMessage(
-		address _recipient,
+		IMessageReceiver _recipient,
 		uint256 _messageId,
 		string calldata _sender,
 		uint256 _fromNetworkId,
+		bool _receipt,
 		bytes calldata _message
 	) external virtual override onlyController returns (bool success) {
-		try IMessageReceiver(_recipient).receiveBridgeMessage(_sender, _fromNetworkId, _message) returns (bool result) {
+		try _recipient.receiveBridgeMessage(_sender, _fromNetworkId, _message) returns (bool result) {
 			success = result;
 		} catch {
 			success = false;
 		}
 
-		emit MessageReceived(_recipient, _sender, success, _messageId);
+		emit MessageReceived(_recipient, _sender, success, _messageId, _receipt);
 	}
 
 	function toBytes(uint256 x) internal pure returns (bytes memory b) {
