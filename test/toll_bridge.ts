@@ -873,6 +873,7 @@ describe("Toll Bridge", function () {
       // @ts-ignore
       await tx.events?.forEach((e) => {
         expect(e.args?.from).to.equal(owner.address);
+        expect(e.args?.fromNetworkId).to.equal(100);
         expect(e.args?.receiver).to.equal(mockReceiver.address);
         expect(e.args?.success).to.equal(false);
         expect(e.args?.messageId).to.equal(1);
