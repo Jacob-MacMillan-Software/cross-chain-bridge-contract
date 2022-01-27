@@ -55,7 +55,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 		uint256 networkId,
 		bytes calldata
 	) external virtual override payable {
-		// This function is only payable so it can be overriden by TollBridge. We don't want to actually except any ETH 
+		// This function is only payable so it can be overriden by TollBridge. We don't want to actually accept any ETH 
 		require(msg.value == 0, "Bridge: Function not payable");
 
 		_transferFungible(token, amount, networkId);
@@ -86,7 +86,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 		uint256 _networkId,
 		bytes calldata
 	) external virtual override payable {
-		// This function is only payable so it can be overriden by TollBridge. We don't want to actually except any ETH 
+		// This function is only payable so it can be overriden by TollBridge. We don't want to actually accept any ETH 
 		require(msg.value == 0, "Bridge: Function not payable");
 
 		_transferNonFungible(_token, _tokenId, _networkId);
@@ -133,7 +133,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 		uint256 _networkId,
 		bytes calldata
 	) external virtual override payable {
-		// This function is only payable so it can be overriden by TollBridge. We don't want to actually except any ETH 
+		// This function is only payable so it can be overriden by TollBridge. We don't want to actually accept any ETH 
 		require(msg.value == 0, "Bridge: Function not payable");
 
 		_transferMixedFungible(_token, _tokenId, _amount, _networkId);
@@ -175,7 +175,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 		bytes calldata _message,
 		bytes calldata
 	) external virtual override payable {
-		// This function is only payable so it can be overriden by TollBridge. We don't want to actually except any ETH 
+		// This function is only payable so it can be overriden by TollBridge. We don't want to actually accept any ETH 
 		require(msg.value == 0, "Bridge: Function not payable");
 
 		_sendMessage(_messageId, _destination, _recipient, _receipt, _message);
@@ -187,7 +187,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 		bytes calldata _message,
 		bytes calldata
 	) external virtual override payable {
-		// This function is only payable so it can be overriden by TollBridge. We don't want to actually except any ETH 
+		// This function is only payable so it can be overriden by TollBridge. We don't want to actually accept any ETH 
 		require(msg.value == 0, "Bridge: Function not payable");
 
 		_sendBroadcast(_messageId, _receipt, _message);
