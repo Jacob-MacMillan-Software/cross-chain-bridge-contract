@@ -207,7 +207,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 			success = false;
 		}
 
-		emit MessageReceived(_recipient, _sender, success, _messageId, _receipt);
+		emit MessageReceived(_recipient, _sender, _fromNetworkId, success, _messageId, _receipt);
 	}
 
 	function toBytes(uint256 x) internal pure returns (bytes memory b) {

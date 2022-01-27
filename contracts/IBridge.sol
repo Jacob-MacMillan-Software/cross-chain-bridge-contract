@@ -61,6 +61,7 @@ interface IBridge {
 	event MessageReceived(
 		IMessageReceiver indexed receiver,
 		string from,
+		uint256 fromNetworkId,
 		bool success,
 		uint256 messageId,
 		bool receipt
