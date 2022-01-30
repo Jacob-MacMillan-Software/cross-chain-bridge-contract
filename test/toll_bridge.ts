@@ -1,44 +1,50 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { Contract } from "ethers";
 // eslint-disable-next-line node/no-extraneous-import
 import { deployMockContract } from "@ethereum-waffle/mock-contract";
 // eslint-disable-next-line node/no-missing-import
 import { generateFeeData } from "./helpers/messageSigning";
 
-const IERC20 = require("../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json");
 const IERC721 = require("../artifacts/contracts/IERC721Bridgable.sol/IERC721Bridgable.json");
 const IERC1155 = require("../artifacts/contracts/IERC1155Bridgable.sol/IERC1155Bridgable.json");
 const IMessageReceiver = require("../artifacts/contracts/IMessageReceiver.sol/IMessageReceiver.json");
+const ERC20Mock = require("../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json");
+const ERC721Mock = require("../artifacts/contracts/mocks/ERC721Mock.sol/ERC721Mock.json");
+const ERC1155Mock = require("../artifacts/contracts/mocks/ERC1155Mock.sol/ERC1155Mock.json");
 
 describe("Toll Bridge", function () {
   const zeroAddress = "0x0000000000000000000000000000000000000000";
   const fakeFeeTokenAddr = "0x1111111111111111111111111111111111111111";
   const noExpireBlock = 999999999;
   const feeAmount = 1000;
-  let tollToken: Contract;
+  let tollToken: typeof ERC20Mock;
 
   beforeEach(async function () {
     // Setup the token to use for tolls
+    const [owner, addr1] = await ethers.getSigners();
 
-    const [owner] = await ethers.getSigners();
-    tollToken = await deployMockContract(owner, IERC20.abi);
+    tollToken = await ethers.getContractFactory("ERC20Mock");
+    tollToken = await tollToken.deploy("Toll", "TOLL");
+    await tollToken.deployed();
 
-    tollToken.mock.transferFrom.returns(true);
-    tollToken.mock.transfer.returns(true);
-    // Each unit test may modify the mock returns
+    await tollToken.mint(owner.address, "100000000000000000000");
+    await tollToken.mint(addr1.address, "100000000000000000000");
   });
 
   describe("ERC20 bridge", function () {
+    let mockERC20: typeof ERC20Mock;
+
+    beforeEach(async function () {
+      const [owner] = await ethers.getSigners();
+
+      mockERC20 = await ethers.getContractFactory("ERC20Mock");
+      mockERC20 = await mockERC20.deploy("Test", "TST");
+
+      await mockERC20.mint(owner.address, "100000000000000000000");
+    });
+
     it("Transfer a fungilbe token to another network with no fee", async function () {
       const [owner, addr1] = await ethers.getSigners();
-
-      const mockERC20 = await deployMockContract(owner, IERC20.abi);
-
-      await mockERC20.mock.transferFrom.returns(true);
-      await mockERC20.mock.transfer.returns(true);
-
-      tollToken.mock.transferFrom.reverts(); // This function shouldn't be called
 
       const Bridge = await ethers.getContractFactory("TollBridge");
       const bridge = await upgrades.deployProxy(Bridge, [
@@ -46,6 +52,8 @@ describe("Toll Bridge", function () {
         addr1.address,
       ]);
       await bridge.deployed();
+
+      await mockERC20.approve(bridge.address, 0xffffffffff);
 
       // Generate fee verification
       const feeData = await generateFeeData(
@@ -71,23 +79,17 @@ describe("Toll Bridge", function () {
 
       const tx = await transferTx.wait();
 
-      expect(tx.events?.length).to.equal(1);
+      expect(tx.events.length).to.equal(3);
 
-      // @ts-ignore
-      await tx.events?.forEach((e) => {
-        expect(e.args?.from).to.equal(owner.address);
-        expect(e.args?.token).to.equal(mockERC20.address);
-        expect(parseInt(e.args?.amount)).to.equal(100);
-        expect(parseInt(e.args?.networkId)).to.equal(2);
-      });
+      const bridgeTxEvent = tx.events[2];
+      expect(bridgeTxEvent.args.from).to.equal(owner.address);
+      expect(bridgeTxEvent.args.token).to.equal(mockERC20.address);
+      expect(parseInt(bridgeTxEvent.args.amount)).to.equal(100);
+      expect(parseInt(bridgeTxEvent.args.networkId)).to.equal(2);
     });
 
     it("Claim a fungible token that was transfered", async function () {
       const [owner, addr1] = await ethers.getSigners();
-
-      const mockERC20 = await deployMockContract(owner, IERC20.abi);
-
-      await mockERC20.mock.transfer.returns(true);
 
       const Bridge = await ethers.getContractFactory("TollBridge");
       const bridge = await upgrades.deployProxy(Bridge, [
@@ -96,7 +98,7 @@ describe("Toll Bridge", function () {
       ]);
       await bridge.deployed();
 
-      await mockERC20.mock.balanceOf.withArgs(bridge.address).returns(100);
+      await mockERC20.mint(bridge.address, 100);
 
       // Claim token
       const claimTx = await bridge.bridgeClaimFungible(
@@ -106,21 +108,16 @@ describe("Toll Bridge", function () {
       );
       const tx = await claimTx.wait();
 
-      // @ts-ignore
-      await tx.events?.forEach((e) => {
-        expect(e.args?.from).to.equal(addr1.address);
-        expect(e.args?.token).to.equal(mockERC20.address);
-        expect(parseInt(e.args?.amount)).to.equal(100);
-      });
+      expect(tx.events.length).to.equal(2);
+
+      const bridgeClaimEvent = tx.events[1];
+      expect(bridgeClaimEvent.args.from).to.equal(addr1.address);
+      expect(bridgeClaimEvent.args.token).to.equal(mockERC20.address);
+      expect(parseInt(bridgeClaimEvent.args.amount)).to.equal(100);
     });
 
     it("Transfer a fungilbe token to another network with fee paid in ERC-20", async function () {
       const [owner, addr1] = await ethers.getSigners();
-
-      const mockERC20 = await deployMockContract(owner, IERC20.abi);
-
-      await mockERC20.mock.transferFrom.returns(true);
-      await mockERC20.mock.transfer.returns(true);
 
       const Bridge = await ethers.getContractFactory("TollBridge");
       const bridge = await upgrades.deployProxy(Bridge, [
@@ -129,10 +126,8 @@ describe("Toll Bridge", function () {
       ]);
       await bridge.deployed();
 
-      // We'll use this to verify the fee is being taken
-      await tollToken.mock.transferFrom
-        .withArgs(owner.address, bridge.address, feeAmount)
-        .revertsWithReason("Test Working");
+      await tollToken.approve(bridge.address, 0xffffffffff);
+      await mockERC20.approve(bridge.address, 0xffffffffff);
 
       // Generate fee verification
       const feeData = await generateFeeData(
@@ -142,33 +137,32 @@ describe("Toll Bridge", function () {
         feeAmount,
         noExpireBlock,
         { tokenAddr: mockERC20.address, tokenAmount: 100 },
-        "0x",
+        null,
         false,
         addr1,
         bridge
       );
 
-      let pass: boolean = false;
-      try {
-        await bridge.transferFungible(mockERC20.address, 100, 2, feeData);
-      } /* @ts-ignore */ catch (err) {
-        if (err.toString().includes("Test Working")) {
-          pass = true;
-        } else {
-          throw err;
-        }
-      }
+      const transferTx = await bridge.transferFungible(
+        mockERC20.address,
+        100,
+        2,
+        feeData
+      );
+      const tx = await transferTx.wait();
 
-      expect(pass).to.equal(true);
+      expect(tx.events.length).to.equal(5); // Approval, transfer x2, bridge transfer
+
+      // Only bridge transfer event has e?.args for some reason
+      const bridgeTxEvent = tx.events[2];
+      expect(bridgeTxEvent.args.from).to.equal(owner.address);
+      expect(bridgeTxEvent.args.token).to.equal(mockERC20.address);
+      expect(parseInt(bridgeTxEvent.args.amount)).to.equal(100);
+      expect(parseInt(bridgeTxEvent.args.networkId)).to.equal(2);
     });
 
     it("Transfer a fungilbe token to another network with fee paid in ETH", async function () {
       const [owner, addr1] = await ethers.getSigners();
-
-      const mockERC20 = await deployMockContract(owner, IERC20.abi);
-
-      await mockERC20.mock.transferFrom.returns(true);
-      await mockERC20.mock.transfer.returns(true);
 
       const Bridge = await ethers.getContractFactory("TollBridge");
       const bridge = await upgrades.deployProxy(Bridge, [
@@ -176,6 +170,8 @@ describe("Toll Bridge", function () {
         addr1.address,
       ]);
       await bridge.deployed();
+
+      await mockERC20.approve(bridge.address, 0xffffffffff);
 
       // Generate fee verification
       const feeData = await generateFeeData(
@@ -201,15 +197,13 @@ describe("Toll Bridge", function () {
 
       const tx = await transferTx.wait();
 
-      expect(tx.events?.length).to.equal(1);
+      expect(tx.events.length).to.equal(3);
 
-      // @ts-ignore
-      await tx.events?.forEach((e) => {
-        expect(e.args?.from).to.equal(owner.address);
-        expect(e.args?.token).to.equal(mockERC20.address);
-        expect(parseInt(e.args?.amount)).to.equal(100);
-        expect(parseInt(e.args?.networkId)).to.equal(2);
-      });
+      const bridgeTxEvent = tx.events[2];
+      expect(bridgeTxEvent.args.from).to.equal(owner.address);
+      expect(bridgeTxEvent.args.token).to.equal(mockERC20.address);
+      expect(parseInt(bridgeTxEvent.args.amount)).to.equal(100);
+      expect(parseInt(bridgeTxEvent.args.networkId)).to.equal(2);
     });
   });
 
@@ -220,8 +214,6 @@ describe("Toll Bridge", function () {
       const mockERC721 = await deployMockContract(owner, IERC721.abi);
 
       await mockERC721.mock.transferFrom.returns();
-
-      tollToken.mock.transferFrom.reverts(); // This function shouldn't be called
 
       const Bridge = await ethers.getContractFactory("TollBridge");
       const bridge = await upgrades.deployProxy(Bridge, [
@@ -344,6 +336,8 @@ describe("Toll Bridge", function () {
         addr1.address,
       ]);
       await bridge.deployed();
+      
+      await tollToken.approve(bridge.address, 0xffffffffff);
 
       // Generate fee verification
       const feeData = await generateFeeData(
@@ -358,11 +352,6 @@ describe("Toll Bridge", function () {
         addr1,
         bridge
       );
-
-      // We'll use this to verify the fee is being taken
-      await tollToken.mock.transferFrom
-        .withArgs(owner.address, bridge.address, feeAmount)
-        .revertsWithReason("Test Working");
 
       let pass: boolean = false;
       // Transfer a token to network 2
@@ -437,8 +426,6 @@ describe("Toll Bridge", function () {
 
       await mockERC1155.mock.safeTransferFrom.returns();
 
-      tollToken.mock.transferFrom.reverts(); // This function shouldn't be called
-
       const Bridge = await ethers.getContractFactory("TollBridge");
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
@@ -490,19 +477,14 @@ describe("Toll Bridge", function () {
 
       await mockERC1155.mock.safeTransferFrom.returns();
 
-      tollToken.mock.transferFrom.reverts(); // This function shouldn't be called
-
       const Bridge = await ethers.getContractFactory("TollBridge");
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
       ]);
       await bridge.deployed();
-
-      // We'll use this to verify the fee is being taken
-      await tollToken.mock.transferFrom
-        .withArgs(owner.address, bridge.address, feeAmount)
-        .revertsWithReason("Test Working");
+      
+      await tollToken.approve(bridge.address, 0xffffffffff);
 
       // Generate fee verification
       const feeData = await generateFeeData(
@@ -649,6 +631,8 @@ describe("Toll Bridge", function () {
         addr1.address,
       ]);
       await bridge.deployed();
+
+      await tollToken.approve(bridge.address, 0xffffffffff);
 
       // Generate fee verification
       const feeData = await generateFeeData(
