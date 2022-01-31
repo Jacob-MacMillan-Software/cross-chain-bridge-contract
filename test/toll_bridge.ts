@@ -1,11 +1,8 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-// eslint-disable-next-line node/no-extraneous-import
-import { deployMockContract } from "@ethereum-waffle/mock-contract";
 // eslint-disable-next-line node/no-missing-import
 import { generateFeeData } from "./helpers/messageSigning";
 
-const IMessageReceiver = require("../artifacts/contracts/IMessageReceiver.sol/IMessageReceiver.json");
 const ERC20Mock = require("../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json");
 const ERC721Mock = require("../artifacts/contracts/mocks/ERC721Mock.sol/ERC721Mock.json");
 const ERC1155Mock = require("../artifacts/contracts/mocks/ERC1155Mock.sol/ERC1155Mock.json");
@@ -829,16 +826,8 @@ describe("Toll Bridge", function () {
       ]);
       await bridge.deployed();
 
-      // Create mock message receiver
-      const mockReceiver = await deployMockContract(
-        owner,
-        IMessageReceiver.abi
-      );
-
-      await mockReceiver.mock.receiveBridgeMessage.returns(false);
-
       const relayTx = await bridge.relayMessage(
-        mockReceiver.address, // Recipient
+        mockMessageReceiver.address, // Recipient
         1, // MessageId
         owner.address, // Sender
         100, // From network
@@ -853,7 +842,9 @@ describe("Toll Bridge", function () {
       const messageReceiveEvent = tx.events[0];
       expect(messageReceiveEvent.args.from).to.equal(owner.address);
       expect(messageReceiveEvent.args.fromNetworkId).to.equal(100);
-      expect(messageReceiveEvent.args.receiver).to.equal(mockReceiver.address);
+      expect(messageReceiveEvent.args.receiver).to.equal(
+        mockMessageReceiver.address
+      );
       expect(messageReceiveEvent.args.success).to.equal(false);
       expect(messageReceiveEvent.args.messageId).to.equal(1);
       expect(messageReceiveEvent.args.receipt).to.equal(true);
