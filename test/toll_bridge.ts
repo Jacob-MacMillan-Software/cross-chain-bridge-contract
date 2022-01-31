@@ -5,7 +5,6 @@ import { deployMockContract } from "@ethereum-waffle/mock-contract";
 // eslint-disable-next-line node/no-missing-import
 import { generateFeeData } from "./helpers/messageSigning";
 
-const IERC1155 = require("../artifacts/contracts/IERC1155Bridgable.sol/IERC1155Bridgable.json");
 const IMessageReceiver = require("../artifacts/contracts/IMessageReceiver.sol/IMessageReceiver.json");
 const ERC20Mock = require("../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json");
 const ERC721Mock = require("../artifacts/contracts/mocks/ERC721Mock.sol/ERC721Mock.json");
@@ -411,12 +410,24 @@ describe("Toll Bridge", function () {
   });
 
   describe("ERC1155 bridge", function () {
+    let mockERC1155: typeof ERC1155Mock;
+
+    beforeEach(async function () {
+      const [owner] = await ethers.getSigners();
+
+      mockERC1155 = await ethers.getContractFactory("ERC1155Mock");
+      mockERC1155 = await mockERC1155.deploy("testuri/");
+
+      await mockERC1155.mintBatch(
+        owner.address,
+        [1, 2, 3, 4],
+        [100, 100, 100, 100],
+        "0x"
+      );
+    });
+
     it("Transfer a mixed fungilbe token to another network with no fee", async function () {
       const [owner, addr1] = await ethers.getSigners();
-
-      const mockERC1155 = await deployMockContract(owner, IERC1155.abi);
-
-      await mockERC1155.mock.safeTransferFrom.returns();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
       const bridge = await upgrades.deployProxy(Bridge, [
@@ -424,6 +435,8 @@ describe("Toll Bridge", function () {
         addr1.address,
       ]);
       await bridge.deployed();
+
+      await mockERC1155.setApprovalForAll(bridge.address, true);
 
       // Generate fee verification
       const feeData = await generateFeeData(
@@ -433,7 +446,7 @@ describe("Toll Bridge", function () {
         0,
         noExpireBlock,
         { tokenAddr: mockERC1155.address, tokenId: 1, tokenAmount: 100 },
-        "0x",
+        null,
         false,
         addr1,
         bridge
@@ -450,24 +463,18 @@ describe("Toll Bridge", function () {
 
       const tx = await transferTx.wait();
 
-      expect(tx.events?.length).to.equal(1);
+      expect(tx.events.length).to.equal(2);
 
-      // @ts-ignore
-      await tx.events?.forEach((e) => {
-        expect(e.args?.from).to.equal(owner.address);
-        expect(e.args?.token).to.equal(mockERC1155.address);
-        expect(parseInt(e.args?.tokenId)).to.equal(1);
-        expect(parseInt(e.args?.amount)).to.equal(100);
-        expect(parseInt(e.args?.networkId)).to.equal(2);
-      });
+      const bridgeTransferEvent = tx.events[1];
+      expect(bridgeTransferEvent.args.from).to.equal(owner.address);
+      expect(bridgeTransferEvent.args.token).to.equal(mockERC1155.address);
+      expect(parseInt(bridgeTransferEvent.args.tokenId)).to.equal(1);
+      expect(parseInt(bridgeTransferEvent.args.amount)).to.equal(100);
+      expect(parseInt(bridgeTransferEvent.args.networkId)).to.equal(2);
     });
 
     it("Transfer a mixed fungilbe token to another network with fee in ERC-20", async function () {
       const [owner, addr1] = await ethers.getSigners();
-
-      const mockERC1155 = await deployMockContract(owner, IERC1155.abi);
-
-      await mockERC1155.mock.safeTransferFrom.returns();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
       const bridge = await upgrades.deployProxy(Bridge, [
@@ -477,6 +484,7 @@ describe("Toll Bridge", function () {
       await bridge.deployed();
 
       await tollToken.approve(bridge.address, 0xffffffffff);
+      await mockERC1155.setApprovalForAll(bridge.address, true);
 
       // Generate fee verification
       const feeData = await generateFeeData(
@@ -492,32 +500,28 @@ describe("Toll Bridge", function () {
         bridge
       );
 
-      let pass: boolean = false;
-      try {
-        await bridge.transferMixedFungible(
-          mockERC1155.address,
-          1,
-          100,
-          2,
-          feeData
-        );
-      } /* @ts-ignore */ catch (err) {
-        if (err.toString().includes("Test Working")) {
-          pass = true;
-        } else {
-          throw err;
-        }
-      }
+      const transferTx = await bridge.transferMixedFungible(
+        mockERC1155.address,
+        1,
+        100,
+        2,
+        feeData
+      );
 
-      expect(pass).to.equal(true);
+      const tx = await transferTx.wait();
+
+      expect(tx.events.length).to.equal(4);
+
+      const bridgeTransferEvent = tx.events[1];
+      expect(bridgeTransferEvent.args.from).to.equal(owner.address);
+      expect(bridgeTransferEvent.args.token).to.equal(mockERC1155.address);
+      expect(parseInt(bridgeTransferEvent.args.tokenId)).to.equal(1);
+      expect(parseInt(bridgeTransferEvent.args.amount)).to.equal(100);
+      expect(parseInt(bridgeTransferEvent.args.networkId)).to.equal(2);
     });
 
     it("Transfer a mixed fungilbe token to another network with fee in ETH", async function () {
       const [owner, addr1] = await ethers.getSigners();
-
-      const mockERC1155 = await deployMockContract(owner, IERC1155.abi);
-
-      await mockERC1155.mock.safeTransferFrom.returns();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
       const bridge = await upgrades.deployProxy(Bridge, [
@@ -525,6 +529,8 @@ describe("Toll Bridge", function () {
         addr1.address,
       ]);
       await bridge.deployed();
+
+      await mockERC1155.setApprovalForAll(bridge.address, true);
 
       // Generate fee verification
       const feeData = await generateFeeData(
@@ -550,24 +556,18 @@ describe("Toll Bridge", function () {
       );
       const tx = await transferTx.wait();
 
-      expect(tx.events?.length).to.equal(1);
+      expect(tx.events.length).to.equal(2);
 
-      // @ts-ignore
-      await tx.events?.forEach((e) => {
-        expect(e.args?.from).to.equal(owner.address);
-        expect(e.args?.token).to.equal(mockERC1155.address);
-        expect(parseInt(e.args?.tokenId)).to.equal(1);
-        expect(parseInt(e.args?.amount)).to.equal(100);
-        expect(parseInt(e.args?.networkId)).to.equal(2);
-      });
+      const bridgeTransferEvent = tx.events[1];
+      expect(bridgeTransferEvent.args.from).to.equal(owner.address);
+      expect(bridgeTransferEvent.args.token).to.equal(mockERC1155.address);
+      expect(parseInt(bridgeTransferEvent.args.tokenId)).to.equal(1);
+      expect(parseInt(bridgeTransferEvent.args.amount)).to.equal(100);
+      expect(parseInt(bridgeTransferEvent.args.networkId)).to.equal(2);
     });
 
     it("Claim a mixed fungible token that was transfered", async function () {
       const [owner, addr1] = await ethers.getSigners();
-
-      const mockERC1155 = await deployMockContract(owner, IERC1155.abi);
-
-      await mockERC1155.mock.safeTransferFrom.returns();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
       const bridge = await upgrades.deployProxy(Bridge, [
@@ -576,24 +576,24 @@ describe("Toll Bridge", function () {
       ]);
       await bridge.deployed();
 
-      await mockERC1155.mock.balanceOf.withArgs(bridge.address, 1).returns(100);
+      await mockERC1155.mint(bridge.address, 5, 100, "0x");
 
       // Claim token
       const claimTx = await bridge.bridgeClaimMixedFungible(
         mockERC1155.address,
         addr1.address,
-        1,
+        5,
         100
       );
       const tx = await claimTx.wait();
 
-      // @ts-ignore
-      await tx.events?.forEach((e) => {
-        expect(e.args?.from).to.equal(addr1.address);
-        expect(e.args?.token).to.equal(mockERC1155.address);
-        expect(parseInt(e.args?.tokenId)).to.equal(1);
-        expect(parseInt(e.args?.amount)).to.equal(100);
-      });
+      expect(tx.events.length).to.equal(2);
+
+      const bridgeClaimEvent = tx.events[1];
+      expect(bridgeClaimEvent.args.from).to.equal(addr1.address);
+      expect(bridgeClaimEvent.args.token).to.equal(mockERC1155.address);
+      expect(parseInt(bridgeClaimEvent.args.tokenId)).to.equal(5);
+      expect(parseInt(bridgeClaimEvent.args.amount)).to.equal(100);
     });
   });
 
