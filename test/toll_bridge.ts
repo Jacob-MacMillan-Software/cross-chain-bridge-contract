@@ -9,6 +9,7 @@ const IMessageReceiver = require("../artifacts/contracts/IMessageReceiver.sol/IM
 const ERC20Mock = require("../artifacts/contracts/mocks/ERC20Mock.sol/ERC20Mock.json");
 const ERC721Mock = require("../artifacts/contracts/mocks/ERC721Mock.sol/ERC721Mock.json");
 const ERC1155Mock = require("../artifacts/contracts/mocks/ERC1155Mock.sol/ERC1155Mock.json");
+const MessageReceiverMock = require("../artifacts/contracts/mocks/MessageReceiverMock.sol/MessageReceiverMock.json");
 
 describe("Toll Bridge", function () {
   const zeroAddress = "0x0000000000000000000000000000000000000000";
@@ -598,20 +599,40 @@ describe("Toll Bridge", function () {
   });
 
   describe("Arbitrary message bridge", function () {
-    // @ts-ignore
-    let encodedMessage;
-    // @ts-ignore
-    let decodedMessage;
+    type plainMessage = {
+      types: Array<string>;
+      data: Array<string>;
+    };
+
+    let encodedMessage: string;
+    let decodedMessage: plainMessage;
+    let hardFailMessage: string;
+    let softFailMessage: string;
+
+    let mockMessageReceiver: typeof MessageReceiverMock;
 
     before(function () {
       const abi = new ethers.utils.AbiCoder();
 
       decodedMessage = {
         types: ["string", "uint256"],
-        data: ["This is a message", 17], // 17 is the length of the message
+        data: ["This is a message", "17"], // 17 is the length of the message
       };
 
       encodedMessage = abi.encode(decodedMessage.types, decodedMessage.data);
+
+      hardFailMessage = abi.encode(["string"], ["FAIL"]);
+      softFailMessage = abi.encode(["string"], ["fail"]);
+    });
+
+    beforeEach(async function () {
+      mockMessageReceiver = await ethers.getContractFactory(
+        "MessageReceiverMock"
+      );
+      mockMessageReceiver = await mockMessageReceiver.deploy();
+
+      mockMessageReceiver.setHardFail(hardFailMessage, true);
+      mockMessageReceiver.setSoftFail(softFailMessage, true);
     });
 
     it("Send an arbitrary message to another network with ERC-20 fee", async function () {
@@ -634,7 +655,6 @@ describe("Toll Bridge", function () {
         feeAmount,
         noExpireBlock,
         { tokenAddr: addr1.address },
-        // @ts-ignore
         encodedMessage,
         false,
         addr1,
@@ -646,25 +666,21 @@ describe("Toll Bridge", function () {
         100, // Destination Network
         addr1.address, // Recipient
         false, // Request delivery receipt
-        // @ts-ignore
         encodedMessage, // Message
         feeData
       );
 
       const tx = await messageTx.wait();
 
-      expect(tx.events?.length).to.equal(1);
+      expect(tx.events.length).to.equal(3);
 
-      // @ts-ignore
-      await tx.events?.forEach((e) => {
-        expect(e.args?.from).to.equal(owner.address);
-        expect(parseInt(e.args?.messageId)).to.equal(1);
-        expect(parseInt(e.args?.destination)).to.equal(100);
-        expect(e.args?.recipient).to.equal(addr1.address);
-        expect(e.args?.receipt).to.equal(false);
-        // @ts-ignore
-        expect(e.args?.message).to.equal(encodedMessage);
-      });
+      const messageSendEvent = tx.events[0];
+      expect(messageSendEvent.args.from).to.equal(owner.address);
+      expect(parseInt(messageSendEvent.args.messageId)).to.equal(1);
+      expect(parseInt(messageSendEvent.args.destination)).to.equal(100);
+      expect(messageSendEvent.args.recipient).to.equal(addr1.address);
+      expect(messageSendEvent.args.receipt).to.equal(false);
+      expect(messageSendEvent.args.message).to.equal(encodedMessage);
     });
 
     it("Send an arbitrary message to another network with ETH fee", async function () {
@@ -705,18 +721,15 @@ describe("Toll Bridge", function () {
 
       const tx = await messageTx.wait();
 
-      expect(tx.events?.length).to.equal(1);
+      expect(tx.events.length).to.equal(1);
 
-      // @ts-ignore
-      await tx.events?.forEach((e) => {
-        expect(e.args?.from).to.equal(owner.address);
-        expect(parseInt(e.args?.messageId)).to.equal(1);
-        expect(parseInt(e.args?.destination)).to.equal(100);
-        expect(e.args?.recipient).to.equal(addr1.address);
-        expect(e.args?.receipt).to.equal(false);
-        // @ts-ignore
-        expect(e.args?.message).to.equal(encodedMessage);
-      });
+      const messageSendEvent = tx.events[0];
+      expect(messageSendEvent.args.from).to.equal(owner.address);
+      expect(parseInt(messageSendEvent.args.messageId)).to.equal(1);
+      expect(parseInt(messageSendEvent.args.destination)).to.equal(100);
+      expect(messageSendEvent.args.recipient).to.equal(addr1.address);
+      expect(messageSendEvent.args.receipt).to.equal(false);
+      expect(messageSendEvent.args.message).to.equal(encodedMessage);
     });
 
     it("Send an arbitrary message broadcast with ERC-20 fee", async function () {
@@ -729,6 +742,8 @@ describe("Toll Bridge", function () {
       ]);
       await bridge.deployed();
 
+      await tollToken.approve(bridge.address, 0xffffffffff);
+
       // Generate fee verification
       const feeData = await generateFeeData(
         owner.address,
@@ -737,7 +752,6 @@ describe("Toll Bridge", function () {
         feeAmount,
         noExpireBlock,
         { tokenAddr: zeroAddress },
-        // @ts-ignore
         encodedMessage,
         false,
         addr1,
@@ -747,23 +761,19 @@ describe("Toll Bridge", function () {
       const broadcastTx = await bridge.sendBroadcast(
         1, // Message ID
         false, // Request delivery receipt
-        // @ts-ignore
         encodedMessage, // Message
         feeData
       );
 
       const tx = await broadcastTx.wait();
 
-      expect(tx.events?.length).to.equal(1);
+      expect(tx.events.length).to.equal(3);
 
-      // @ts-ignore
-      await tx.events?.forEach((e) => {
-        expect(e.args?.from).to.equal(owner.address);
-        expect(parseInt(e.args?.messageId)).to.equal(1);
-        expect(e.args?.receipt).to.equal(false);
-        // @ts-ignore
-        expect(e.args?.message).to.equal(encodedMessage);
-      });
+      const messageSendEvent = tx.events[0];
+      expect(messageSendEvent.args.from).to.equal(owner.address);
+      expect(parseInt(messageSendEvent.args.messageId)).to.equal(1);
+      expect(messageSendEvent.args.receipt).to.equal(false);
+      expect(messageSendEvent.args.message).to.equal(encodedMessage);
     });
 
     it("Send an arbitrary message broadcast with ETH fee", async function () {
@@ -784,7 +794,6 @@ describe("Toll Bridge", function () {
         feeAmount,
         noExpireBlock,
         { tokenAddr: zeroAddress },
-        // @ts-ignore
         encodedMessage,
         false,
         addr1,
@@ -794,7 +803,6 @@ describe("Toll Bridge", function () {
       const broadcastTx = await bridge.sendBroadcast(
         1, // Message ID
         false, // Request delivery receipt
-        // @ts-ignore
         encodedMessage, // Message
         feeData,
         { value: feeAmount }
@@ -802,16 +810,13 @@ describe("Toll Bridge", function () {
 
       const tx = await broadcastTx.wait();
 
-      expect(tx.events?.length).to.equal(1);
+      expect(tx.events.length).to.equal(1);
 
-      // @ts-ignore
-      await tx.events?.forEach((e) => {
-        expect(e.args?.from).to.equal(owner.address);
-        expect(parseInt(e.args?.messageId)).to.equal(1);
-        expect(e.args?.receipt).to.equal(false);
-        // @ts-ignore
-        expect(e.args?.message).to.equal(encodedMessage);
-      });
+      const messageSendEvent = tx.events[0];
+      expect(messageSendEvent.args.from).to.equal(owner.address);
+      expect(parseInt(messageSendEvent.args.messageId)).to.equal(1);
+      expect(messageSendEvent.args.receipt).to.equal(false);
+      expect(messageSendEvent.args.message).to.equal(encodedMessage);
     });
 
     it("Simulate receiving a message", async function () {
@@ -838,23 +843,20 @@ describe("Toll Bridge", function () {
         owner.address, // Sender
         100, // From network
         true, // Request receipt
-        // @ts-ignore
         encodedMessage // Message
       );
 
       const tx = await relayTx.wait();
 
-      expect(tx.events?.length).to.equal(1);
+      expect(tx.events.length).to.equal(1);
 
-      // @ts-ignore
-      await tx.events?.forEach((e) => {
-        expect(e.args?.from).to.equal(owner.address);
-        expect(e.args?.fromNetworkId).to.equal(100);
-        expect(e.args?.receiver).to.equal(mockReceiver.address);
-        expect(e.args?.success).to.equal(false);
-        expect(e.args?.messageId).to.equal(1);
-        expect(e.args?.receipt).to.equal(true);
-      });
+      const messageReceiveEvent = tx.events[0];
+      expect(messageReceiveEvent.args.from).to.equal(owner.address);
+      expect(messageReceiveEvent.args.fromNetworkId).to.equal(100);
+      expect(messageReceiveEvent.args.receiver).to.equal(mockReceiver.address);
+      expect(messageReceiveEvent.args.success).to.equal(false);
+      expect(messageReceiveEvent.args.messageId).to.equal(1);
+      expect(messageReceiveEvent.args.receipt).to.equal(true);
     });
   });
 });
