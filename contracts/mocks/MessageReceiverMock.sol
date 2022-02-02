@@ -13,7 +13,7 @@ contract MessageReceiverMock is IMessageReceiver {
 	function receiveBridgeMessage(
 		string calldata,
 		uint256,
-		bytes memory message
+		bytes calldata message
 	) external override returns (bool) {
 		require(!hardFailOn[message], "MessageReceiverMock: Hard fail");
 		if (softFailOn[message]) return false;
