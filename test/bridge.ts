@@ -27,7 +27,7 @@ describe("Bridge", function () {
       await bridge.deployed();
 
       // Initialzie bridge
-      await bridge.initialize(owner.address);
+      await bridge.initialize(owner.address, 1);
 
       await mockERC20.approve(bridge.address, 0xffffffffff);
 
@@ -58,7 +58,7 @@ describe("Bridge", function () {
       await bridge.deployed();
 
       // Initialzie bridge
-      await bridge.initialize(owner.address);
+      await bridge.initialize(owner.address, 1);
 
       await mockERC20.mint(bridge.address, 0xffffffffff);
 
@@ -102,7 +102,7 @@ describe("Bridge", function () {
       await bridge.deployed();
 
       // Initialzie bridge
-      await bridge.initialize(owner.address);
+      await bridge.initialize(owner.address, 1);
 
       await mockERC721.setApprovalForAll(bridge.address, true);
 
@@ -133,7 +133,7 @@ describe("Bridge", function () {
       await bridge.deployed();
 
       // Initialzie bridge
-      await bridge.initialize(owner.address);
+      await bridge.initialize(owner.address, 1);
 
       await mockERC721.mint(bridge.address, 101);
 
@@ -179,7 +179,7 @@ describe("Bridge", function () {
       await bridge.deployed();
 
       // Initialzie bridge
-      await bridge.initialize(owner.address);
+      await bridge.initialize(owner.address, 1);
 
       await mockERC1155.setApprovalForAll(bridge.address, true);
 
@@ -212,7 +212,7 @@ describe("Bridge", function () {
       await bridge.deployed();
 
       // Initialzie bridge
-      await bridge.initialize(owner.address);
+      await bridge.initialize(owner.address, 1);
 
       await mockERC1155.mint(bridge.address, 5, 100, "0x");
 
@@ -280,7 +280,7 @@ describe("Bridge", function () {
       await bridge.deployed();
 
       // Initialzie bridge
-      await bridge.initialize(owner.address);
+      await bridge.initialize(owner.address, 1);
 
       const messageTx = await bridge.sendMessage(
         1, // Message ID
@@ -312,7 +312,7 @@ describe("Bridge", function () {
       await bridge.deployed();
 
       // Initialzie bridge
-      await bridge.initialize(owner.address);
+      await bridge.initialize(owner.address, 1);
 
       const broadcastTx = await bridge.sendBroadcast(
         1, // Message ID
@@ -340,7 +340,7 @@ describe("Bridge", function () {
       await bridge.deployed();
 
       // Initialzie bridge
-      await bridge.initialize(owner.address);
+      await bridge.initialize(owner.address, 1);
 
       const relayTx = await bridge.relayMessage(
         mockMessageReceiver.address, // Recipient

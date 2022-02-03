@@ -19,9 +19,9 @@ contract TollBridge is Bridge {
 	// Could possibly also have this address be a contract that signs the hashes
 	address public feeVerifier;
 
-	function initialize(address _controller, address _verifier) public virtual initializer {
+	function initialize(address _controller, address _verifier, uint256 _chainId) public virtual initializer {
       feeVerifier = _verifier;
-		Bridge.__init_bridge(_controller);
+		Bridge.__init_bridge(_controller, _chainId);
 	}
 
 	function setFeeVerifier(address _newVerifier) external onlyOwner {

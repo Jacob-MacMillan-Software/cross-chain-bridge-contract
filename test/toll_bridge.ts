@@ -46,6 +46,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -91,6 +92,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         tollToken.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -119,6 +121,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -164,6 +167,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -223,6 +227,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -268,6 +273,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         tollToken.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -296,6 +302,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -324,6 +331,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -368,6 +376,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -431,6 +440,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -478,6 +488,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -525,6 +536,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -571,6 +583,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -639,6 +652,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -687,6 +701,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -736,6 +751,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -780,6 +796,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -823,6 +840,7 @@ describe("Toll Bridge", function () {
       const bridge = await upgrades.deployProxy(Bridge, [
         owner.address,
         addr1.address,
+        1,
       ]);
       await bridge.deployed();
 
@@ -832,7 +850,7 @@ describe("Toll Bridge", function () {
         owner.address, // Sender
         100, // From network
         true, // Request receipt
-        encodedMessage // Message
+        hardFailMessage // Message
       );
 
       const tx = await relayTx.wait();

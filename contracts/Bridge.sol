@@ -29,7 +29,12 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 	 */
 	mapping (address => mapping (address => mapping (uint256 => uint256))) public mixedFungibleClaims; 
 
-	function __init_bridge(address _controller) internal virtual initializer {
+	// Replaces function that gets it to save gas
+	// Is private so it can't be changed when this contract is extended
+	uint256 private setChainId;
+
+	function __init_bridge(address _controller, uint256 _chainId) internal virtual initializer {
+		setChainId = _chainId;
 		Controllable.__init_controller(_controller);
 		ERC1155HolderUpgradeable.__ERC1155Holder_init();
 	}
@@ -38,11 +43,14 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 	 * @dev Returns the chainId of the network this contract is deployed on
 	 */
 	function chainId() public view returns (uint256) {
+		/*
 		uint256 id;
 		assembly {
 			id := chainid()
 		}
 		return id;
+		*/
+	  return setChainId;
 	}
 
 	/**
