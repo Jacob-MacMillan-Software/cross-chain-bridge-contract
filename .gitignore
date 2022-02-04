@@ -10,3 +10,7 @@ artifacts
 
 #Openzeppelin
 /.openzeppelin
+
+# docgen
+docgen
+docs.zip
