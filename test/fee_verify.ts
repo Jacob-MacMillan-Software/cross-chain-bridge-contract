@@ -27,6 +27,7 @@ describe("Fee Verification Signature", function () {
     const bridge = await upgrades.deployProxy(Bridge, [
       owner.address,
       owner.address,
+      1,
     ]);
     await bridge.deployed();
 
@@ -89,6 +90,7 @@ describe("Fee Verification Signature", function () {
     const bridge = await upgrades.deployProxy(Bridge, [
       owner.address,
       owner.address,
+      1,
     ]);
     await bridge.deployed();
 
@@ -165,6 +167,7 @@ describe("Fee Verification Signature", function () {
     const bridge = await upgrades.deployProxy(Bridge, [
       owner.address,
       addr1.address,
+      1,
     ]);
     await bridge.deployed();
 

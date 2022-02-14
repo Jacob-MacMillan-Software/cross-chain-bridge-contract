@@ -20,6 +20,7 @@ async function main() {
   const bridge = await upgrades.deployProxy(Bridge, [
     owner.address,
     owner.address,
+    4, // ID for rinkeby
   ]);
   await bridge.deployed();
 
