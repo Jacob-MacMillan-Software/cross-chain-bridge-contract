@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 
 contract ERC721Mock is ERC721Upgradeable {
 	// no point in making upgradeable
-	constructor(string memory name, string memory symbol) {
+	constructor(string memory name, string memory symbol) initializer {
 		__ERC721_init(name, symbol);
 	}
 

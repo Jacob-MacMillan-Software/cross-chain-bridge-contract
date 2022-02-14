@@ -12,7 +12,7 @@ contract Controllable is OwnableUpgradeable {
 		_;
 	}
 
-	function __init_controller(address _controller) internal virtual initializer {
+	function __init_controller(address _controller) internal virtual onlyInitializing {
 		controller = _controller;
 		__Ownable_init();
 	}

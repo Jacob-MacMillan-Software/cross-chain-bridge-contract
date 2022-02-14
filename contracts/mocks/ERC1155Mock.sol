@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol
 
 contract ERC1155Mock is ERC1155Upgradeable {
 	// No point in making this upgradeable
-	constructor(string memory uri) {
+	constructor(string memory uri) initializer {
 		__ERC1155_init(uri);
 	}
 

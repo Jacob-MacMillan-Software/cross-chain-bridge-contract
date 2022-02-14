@@ -33,7 +33,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 	// Is private so it can't be changed when this contract is extended
 	uint256 private setChainId;
 
-	function __init_bridge(address _controller, uint256 _chainId) internal virtual initializer {
+	function __init_bridge(address _controller, uint256 _chainId) internal virtual onlyInitializing {
 		setChainId = _chainId;
 		Controllable.__init_controller(_controller);
 		ERC1155HolderUpgradeable.__ERC1155Holder_init();
