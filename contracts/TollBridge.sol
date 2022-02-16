@@ -178,6 +178,7 @@ contract TollBridge is Bridge {
 		// token == address(0) is used to indicate fee will be payed in base network currency (ie. ETH on Ethereum, etc.)
 		if(token == address(0) && fee > 0) {
 			require(msg.value == fee, "TollBridge: Incorrect fee paid");
+			pendingFees[token] += fee;
 		} else if(fee > 0) {
 			// Only make payable if the fee is in base network currency
 			require(msg.value == 0, "TollBridge: Function not payable");
