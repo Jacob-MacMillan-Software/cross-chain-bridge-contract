@@ -5,13 +5,19 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 
 contract ERC721Mock is ERC721Upgradeable {
+	string public uri;
+
 	// no point in making upgradeable
 	constructor(string memory name, string memory symbol) initializer {
 		__ERC721_init(name, symbol);
 	}
 
-	function baseURI() public view returns (string memory) {
-		return _baseURI();
+	function _baseURI() internal virtual override view returns (string memory) {
+		return uri;
+	}
+
+	function setUri(string calldata _uri) public {
+		uri = _uri;
 	}
 
 	function exists(uint256 tokenId) public view returns (bool) {
