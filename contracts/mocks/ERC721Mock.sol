@@ -43,4 +43,11 @@ contract ERC721Mock is ERC721Upgradeable {
 	function burn(uint256 tokenId) public {
 		_burn(tokenId);
 	}
+
+	function bridgeMint(
+		address _recipient,
+		uint256 _id
+	) external {
+		_mint(_recipient, _id);
+	}
 }
