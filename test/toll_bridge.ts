@@ -306,8 +306,6 @@ describe("Toll Bridge", function () {
       ]);
       await bridge.deployed();
 
-      await mockERC721.mint(bridge.address, 101);
-
       // Claim token
       const claimTx = await bridge.bridgeClaimNonFungible(
         mockERC721.address,
@@ -316,12 +314,15 @@ describe("Toll Bridge", function () {
       );
       const tx = await claimTx.wait();
 
-      expect(tx.events.length).to.equal(3);
+      expect(tx.events.length).to.equal(2);
 
-      const bridgeClaimEvent = tx.events[2];
+      const bridgeClaimEvent = tx.events[1];
       expect(bridgeClaimEvent.args.from).to.equal(addr1.address);
       expect(bridgeClaimEvent.args.token).to.equal(mockERC721.address);
       expect(parseInt(bridgeClaimEvent.args.tokenId)).to.equal(101);
+
+      const newOwner = await mockERC721.ownerOf(101);
+      expect(newOwner).to.equal(addr1.address);
     });
 
     it("Transfer a non-fungilbe token to another network with fee in ERC-20", async function () {
