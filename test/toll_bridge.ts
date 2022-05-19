@@ -128,6 +128,8 @@ describe("Toll Bridge", function () {
       await tollToken.approve(bridge.address, 0xffffffffff);
       await mockERC20.approve(bridge.address, 0xffffffffff);
 
+      const pendingFeeBefore = await bridge.pendingFees(tollToken.address);
+
       // Generate fee verification
       const feeData = await generateFeeData(
         owner.address,
@@ -158,6 +160,10 @@ describe("Toll Bridge", function () {
       expect(bridgeTxEvent.args.token).to.equal(mockERC20.address);
       expect(parseInt(bridgeTxEvent.args.amount)).to.equal(100);
       expect(parseInt(bridgeTxEvent.args.networkId)).to.equal(2);
+
+      const pendingFeeAfter = await bridge.pendingFees(tollToken.address);
+
+      expect(pendingFeeAfter.sub(pendingFeeBefore)).to.equal(feeAmount);
     });
 
     it("Transfer a fungilbe token to another network with fee paid in ETH", async function () {
@@ -172,6 +178,8 @@ describe("Toll Bridge", function () {
       await bridge.deployed();
 
       await mockERC20.approve(bridge.address, 0xffffffffff);
+
+      const pendingFeeBefore = await bridge.pendingFees(zeroAddress);
 
       // Generate fee verification
       const feeData = await generateFeeData(
@@ -204,6 +212,10 @@ describe("Toll Bridge", function () {
       expect(bridgeTxEvent.args.token).to.equal(mockERC20.address);
       expect(parseInt(bridgeTxEvent.args.amount)).to.equal(100);
       expect(parseInt(bridgeTxEvent.args.networkId)).to.equal(2);
+
+      const pendingFeeAfter = await bridge.pendingFees(zeroAddress);
+
+      expect(pendingFeeAfter.sub(pendingFeeBefore)).to.equal(feeAmount);
     });
   });
 
