@@ -11,24 +11,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpg
 import "@openzeppelin/contracts-upgradeable/token/ERC721/utils/ERC721HolderUpgradeable.sol";
 
 contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC721HolderUpgradeable {
-	/**
-	 * @notice Stores how many of each token each user has a claim to
-	 * mapping is as follows: user's address => token contract address => amount of token
-	 */
-	mapping (address => mapping (address => uint256)) public fungibleClaims; 
-
-	/**
-	 * @notice Stores how many of each token each user has a claim to
-	 * mapping is as follows: user's address => token contract address => tokenId => has the token or not
-	 */
-	mapping (address => mapping (address => mapping (uint256 => bool))) public nonFungibleClaims; 
-
-	/**
-	 * @notice Stores how many of each token each user has a claim to
-	 * mapping is as follows: user's address => token contract address => tokenId => amount of token
-	 */
-	mapping (address => mapping (address => mapping (uint256 => uint256))) public mixedFungibleClaims; 
-
 	// Replaces function that gets it to save gas
 	// Is private so it can't be changed when this contract is extended
 	uint256 private setChainId;
