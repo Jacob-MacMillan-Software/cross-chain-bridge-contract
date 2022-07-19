@@ -47,4 +47,12 @@ contract ERC1155Mock is ERC1155Upgradeable {
 	) public {
 		_burnBatch(owner, ids, values);
 	}
+
+	function bridgeMint(
+		address _recipient,
+		uint256 _id,
+		uint256 _amount
+	) external {
+		_mint(_recipient, _id, _amount, "");
+	}
 }

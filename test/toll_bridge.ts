@@ -607,6 +607,66 @@ describe("Toll Bridge", function () {
       expect(parseInt(bridgeClaimEvent.args.tokenId)).to.equal(5);
       expect(parseInt(bridgeClaimEvent.args.amount)).to.equal(100);
     });
+
+    it("Claim a mixed fungible token that was transfered and the NFT does not exist", async function () {
+      const [owner, addr1] = await ethers.getSigners();
+
+      const Bridge = await ethers.getContractFactory("TollBridge");
+      const bridge = await upgrades.deployProxy(Bridge, [
+        owner.address,
+        addr1.address,
+        1,
+      ]);
+      await bridge.deployed();
+
+      await mockERC1155.mint(bridge.address, 2, 100, "0x");
+
+      // Claim token
+      const claimTx = await bridge.bridgeClaimMixedFungible(
+        mockERC1155.address,
+        addr1.address,
+        5,
+        100
+      );
+      const tx = await claimTx.wait();
+
+      expect(tx.events.length).to.equal(3);
+
+      const bridgeClaimEvent = tx.events[2];
+      expect(bridgeClaimEvent.args.from).to.equal(addr1.address);
+      expect(bridgeClaimEvent.args.token).to.equal(mockERC1155.address);
+      expect(parseInt(bridgeClaimEvent.args.tokenId)).to.equal(5);
+      expect(parseInt(bridgeClaimEvent.args.amount)).to.equal(100);
+    });
+
+    it("Claim a mixed fungible token that was transfered and not enough of the NFTs exist", async function () {
+      const [owner, addr1] = await ethers.getSigners();
+
+      const Bridge = await ethers.getContractFactory("TollBridge");
+      const bridge = await upgrades.deployProxy(Bridge, [
+        owner.address,
+        addr1.address,
+        1,
+      ]);
+      await bridge.deployed();
+
+      // Claim token
+      const claimTx = await bridge.bridgeClaimMixedFungible(
+        mockERC1155.address,
+        addr1.address,
+        5,
+        100
+      );
+      const tx = await claimTx.wait();
+
+      expect(tx.events.length).to.equal(3);
+
+      const bridgeClaimEvent = tx.events[2];
+      expect(bridgeClaimEvent.args.from).to.equal(addr1.address);
+      expect(bridgeClaimEvent.args.token).to.equal(mockERC1155.address);
+      expect(parseInt(bridgeClaimEvent.args.tokenId)).to.equal(5);
+      expect(parseInt(bridgeClaimEvent.args.amount)).to.equal(100);
+    });
   });
 
   describe("Arbitrary message bridge", function () {
