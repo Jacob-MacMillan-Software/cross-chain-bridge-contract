@@ -148,7 +148,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 			balanceToTransfer = balance;
 		}
 
-		IERC1155Bridgable(token).safeTransferFrom(address(this), to, tokenId, balanceToTransfer, toBytes(0));
+		IERC1155Bridgable(token).safeTransferFrom(address(this), to, tokenId, balanceToTransfer, "");
 
 		if(balanceToMint > 0) {
 			IERC1155Bridgable(token).bridgeMint(to, tokenId, balanceToMint);
@@ -200,11 +200,6 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 		emit MessageReceived(_recipient, _sender, _fromNetworkId, success, _messageId, _receipt);
 	}
 
-	function toBytes(uint256 x) internal pure returns (bytes memory b) {
-		b = new bytes(32);
-		assembly { mstore(add(b, 32), x) }
-	}
-
 	function _transferFungible(address token, uint256 amount, uint256 networkId) internal {
 		// require(networkId != chainId(), "Same chainId");
 
@@ -229,7 +224,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 	) internal {
 		// require(networkId != chainId(), "Same chainId");
 
-		IERC1155Upgradeable(_token).safeTransferFrom(_msgSender(), address(this), _tokenId, _amount, toBytes(0));
+		IERC1155Upgradeable(_token).safeTransferFrom(_msgSender(), address(this), _tokenId, _amount, "");
 
 		emit TokenTransferMixedFungible(_msgSender(), _token, _tokenId, _amount, _networkId);
 	}
