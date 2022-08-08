@@ -61,7 +61,10 @@ contract TollBridge is Bridge {
 		if(block.number > maxBlock) revert FeeValidationExpired(maxBlock, block.number);
 
 		// Check that hash is signed by a valid address
-		if(hash.recover(signature) != feeVerifier) revert UntrustedSigner(feeVerifier);
+		{
+			address signer = hash.recover(signature);
+			if(signer != feeVerifier) revert UntrustedSigner(signer);
+		}
 
 		// Verify hash matches sent data
 		bytes32 computedHash = keccak256(abi.encode(
