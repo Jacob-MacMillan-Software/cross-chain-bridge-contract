@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
@@ -9,6 +9,12 @@ contract TollBridge is Bridge {
 	using ECDSAUpgradeable for bytes32;
 	using ECDSAUpgradeable for bytes;
 	using AddressUpgradeable for address payable;
+
+	// Errors
+	error FeeValidationExpired(uint256 maxBlock, uint256 currentBlock);
+	error HashMismatch(bytes32 hash, bytes32 computedHash);
+	error UntrustedSigner(address signer);
+	error IncorrectFeeAmount(uint256 amountPaid, uint256 amountRequired);
 
 	// Fees that have been paid and can be withdrawn from this contract
 	mapping (address => uint256) public pendingFees;
@@ -51,8 +57,11 @@ contract TollBridge is Bridge {
 
       // This is done in order from least gas cost to highest to save gas if one of the checks fail
 
-		// Verfiy fee signature is still valid (within correct block range)
-		require(block.number <= maxBlock, "TollBridge: Fee validation expired");
+		// Verfiy fee signature is still valid (within correct block range) 
+		if(block.number > maxBlock) revert FeeValidationExpired(maxBlock, block.number);
+
+		// Check that hash is signed by a valid address
+		if(hash.recover(signature) != feeVerifier) revert UntrustedSigner(feeVerifier);
 
 		// Verify hash matches sent data
 		bytes32 computedHash = keccak256(abi.encode(
@@ -65,10 +74,7 @@ contract TollBridge is Bridge {
          _messageWithReceiptRequestAndTo
 		)).toEthSignedMessageHash();
 
-		require(hash == computedHash, "TollBridge: Hash does not match data");
-      
-		// Check that hash is signed by a valid address
-		require(hash.recover(signature) == feeVerifier, "TollBridge: Invalid validation");
+		if(hash != computedHash) revert HashMismatch(hash, computedHash);
 	}
 
 	/**
@@ -153,10 +159,8 @@ contract TollBridge is Bridge {
 		_payToll(_feeData);
 	}
 
-
-
 	function withdrawalFees(address _token, uint256 _amount) external virtual onlyController {
-		require(pendingFees[_token] >= _amount, "Insufficient funds");
+		if(pendingFees[_token] < _amount) revert InsufficientFunds(_amount, pendingFees[_token]);
 		pendingFees[_token] -= _amount;
 
 		if(_token == address(0)) {
@@ -177,16 +181,16 @@ contract TollBridge is Bridge {
 
 		// token == address(0) is used to indicate fee will be payed in base network currency (ie. ETH on Ethereum, etc.)
 		if(token == address(0) && fee > 0) {
-			require(msg.value == fee, "TollBridge: Incorrect fee paid");
+			if(msg.value != fee) revert IncorrectFeeAmount(msg.value, fee);
 			pendingFees[token] += fee;
 		} else if(fee > 0) {
 			// Only make payable if the fee is in base network currency
-			require(msg.value == 0, "TollBridge: Function not payable");
+			if(msg.value != 0) revert FunctionNotPayable();
 			pendingFees[token] += fee;
 			IERC20Upgradeable(token).transferFrom(_msgSender(), address(this), fee);
 		} else /* fee == 0 */ {
 			// Only make payable if the fee is in base network currency
-			require(msg.value == 0, "TollBridge: Function not payable");
+			if(msg.value != 0) revert FunctionNotPayable();
 		}
 	}
 }
