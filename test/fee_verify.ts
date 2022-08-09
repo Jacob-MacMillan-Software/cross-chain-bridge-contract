@@ -140,9 +140,7 @@ describe("Fee Verification Signature", function () {
         // @ts-ignore
         err
           .toString()
-          .includes(
-            "reverted with reason string 'TollBridge: Fee validation expired'"
-          )
+          .includes("reverted with custom error 'FeeValidationExpired(0, ")
       ) {
         failed = true;
       } else {

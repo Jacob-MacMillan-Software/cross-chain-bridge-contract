@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
 import "./IBridgeComplete.sol";
 import "./Controllable.sol";
@@ -11,6 +11,10 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/utils/ERC1155HolderUpg
 import "@openzeppelin/contracts-upgradeable/token/ERC721/utils/ERC721HolderUpgradeable.sol";
 
 contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC721HolderUpgradeable {
+	// Errors
+	error FunctionNotPayable();
+	error InsufficientFunds(uint256 amountRequested, uint256 amountRemaining);
+
 	// Replaces function that gets it to save gas
 	// Is private so it can't be changed when this contract is extended
 	uint256 private setChainId;
@@ -46,7 +50,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 		bytes calldata
 	) external virtual override payable {
 		// This function is only payable so it can be overriden by TollBridge. We don't want to actually accept any ETH 
-		require(msg.value == 0, "Bridge: Function not payable");
+		if(msg.value != 0) revert FunctionNotPayable();
 
 		_transferFungible(token, amount, networkId);
 	}
@@ -59,7 +63,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 		address _to,
 		uint256 _amount
 	) external virtual override onlyController {
-		require(IERC20Upgradeable(_token).balanceOf(address(this)) >= _amount, "Insufficient liquidity");
+		if(IERC20Upgradeable(_token).balanceOf(address(this)) < _amount) revert InsufficientFunds(_amount, IERC20Upgradeable(_token).balanceOf(address(this)));
 
 		IERC20Upgradeable(_token).transfer(_to, _amount);
 
@@ -77,7 +81,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 		bytes calldata
 	) external virtual override payable {
 		// This function is only payable so it can be overriden by TollBridge. We don't want to actually accept any ETH 
-		require(msg.value == 0, "Bridge: Function not payable");
+		if(msg.value != 0) revert FunctionNotPayable();
 
 		_transferNonFungible(_token, _tokenId, _networkId);
 	}
@@ -124,7 +128,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 		bytes calldata
 	) external virtual override payable {
 		// This function is only payable so it can be overriden by TollBridge. We don't want to actually accept any ETH 
-		require(msg.value == 0, "Bridge: Function not payable");
+		if(msg.value != 0) revert FunctionNotPayable();
 
 		_transferMixedFungible(_token, _tokenId, _amount, _networkId);
 	}
@@ -166,7 +170,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 		bytes calldata
 	) external virtual override payable {
 		// This function is only payable so it can be overriden by TollBridge. We don't want to actually accept any ETH 
-		require(msg.value == 0, "Bridge: Function not payable");
+		if(msg.value != 0) revert FunctionNotPayable();
 
 		_sendMessage(_messageId, _destination, _recipient, _receipt, _message);
 	}
@@ -178,7 +182,7 @@ contract Bridge is IBridgeComplete, Controllable, ERC1155HolderUpgradeable, ERC7
 		bytes calldata
 	) external virtual override payable {
 		// This function is only payable so it can be overriden by TollBridge. We don't want to actually accept any ETH 
-		require(msg.value == 0, "Bridge: Function not payable");
+		if(msg.value != 0) revert FunctionNotPayable();
 
 		_sendBroadcast(_messageId, _receipt, _message);
 	}

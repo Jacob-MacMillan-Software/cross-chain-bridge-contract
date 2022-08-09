@@ -1,14 +1,17 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract Controllable is OwnableUpgradeable {
+	// Errors
+	error ControllerOnly();
+
 	address private controller;
 
 	modifier onlyController {
-		require(_msgSender() == controller || _msgSender() == owner(), "Controllable: only controller");
+		if(_msgSender() != controller && _msgSender() != owner()) revert ControllerOnly();
 		_;
 	}
 
