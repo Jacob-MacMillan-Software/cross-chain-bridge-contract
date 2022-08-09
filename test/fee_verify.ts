@@ -25,21 +25,12 @@ describe("Fee Verification Signature", function () {
 
     const Bridge = await ethers.getContractFactory("FeeVerifyTester");
     const bridge = await upgrades.deployProxy(Bridge, [
-      owner.address,
-      owner.address,
+      addr1.address,
       1,
     ]);
     await bridge.deployed();
 
     const chainId = await bridge.chainId();
-
-    await bridge.setFeeVerifier(addr1.address);
-
-    const verifier = await bridge.feeVerifier();
-
-    expect(verifier).to.equal(addr1.address);
-
-    console.log(`Verifier: ${verifier}, owner: ${owner.address}`);
 
     // Create signed message
     const dest = 100;
@@ -89,20 +80,11 @@ describe("Fee Verification Signature", function () {
     const Bridge = await ethers.getContractFactory("FeeVerifyTester");
     const bridge = await upgrades.deployProxy(Bridge, [
       owner.address,
-      owner.address,
       1,
     ]);
     await bridge.deployed();
 
     const chainId = await bridge.chainId();
-
-    await bridge.setFeeVerifier(addr1.address);
-
-    const verifier = await bridge.feeVerifier();
-
-    expect(verifier).to.equal(addr1.address);
-
-    console.log(`Verifier: ${verifier}, owner: ${owner.address}`);
 
     // Create signed message
     const dest = 100;
@@ -163,7 +145,6 @@ describe("Fee Verification Signature", function () {
 
     const Bridge = await ethers.getContractFactory("FeeVerifyTester");
     const bridge = await upgrades.deployProxy(Bridge, [
-      owner.address,
       addr1.address,
       1,
     ]);

@@ -19,19 +19,8 @@ contract TollBridge is Bridge {
 	// Fees that have been paid and can be withdrawn from this contract
 	mapping (address => uint256) public pendingFees;
 
-	// Address that can sign fee hashes
-	// In the future we will change this to a ERC-20 token contract
-	// and anyone who holds a token will be allowed to sign fee hashes
-	// Could possibly also have this address be a contract that signs the hashes
-	address public feeVerifier;
-
-	function initialize(address _controller, address _verifier, uint256 _chainId) public virtual initializer {
-      feeVerifier = _verifier;
+	function initialize(address _controller, uint256 _chainId) public virtual initializer {
 		Bridge.__init_bridge(_controller, _chainId);
-	}
-
-	function setFeeVerifier(address _newVerifier) external onlyOwner {
-		feeVerifier = _newVerifier;
 	}
 
 	/** @dev Uses a ECDSA hash to verify that the fee paid is valid
@@ -76,7 +65,7 @@ contract TollBridge is Bridge {
 		// Check that hash is signed by a valid address
 		{
 			address signer = hash.recover(signature);
-			if(signer != feeVerifier) revert UntrustedSigner(signer);
+			if(!isController(signer)) revert UntrustedSigner(signer);
 		}
 	}
 

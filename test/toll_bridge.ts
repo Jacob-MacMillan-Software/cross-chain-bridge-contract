@@ -43,11 +43,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await mockERC20.approve(bridge.address, 0xffffffffff);
@@ -86,14 +82,10 @@ describe("Toll Bridge", function () {
     });
 
     it("Claim a fungible token that was transfered", async function () {
-      const [owner, addr1] = await ethers.getSigners();
+      const [, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        tollToken.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [tollToken.address, 1]);
       await bridge.deployed();
 
       await mockERC20.mint(bridge.address, 100);
@@ -118,11 +110,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await tollToken.approve(bridge.address, 0xffffffffff);
@@ -170,11 +158,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await mockERC20.approve(bridge.address, 0xffffffffff);
@@ -236,11 +220,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await mockERC721.setApprovalForAll(bridge.address, true);
@@ -282,11 +262,7 @@ describe("Toll Bridge", function () {
       const [owner] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        tollToken.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [tollToken.address, 1]);
       await bridge.deployed();
 
       await mockERC721.mint(bridge.address, 101);
@@ -308,14 +284,10 @@ describe("Toll Bridge", function () {
     });
 
     it("Claim a non-fungible token that was transfered and the NFT does not exist", async function () {
-      const [owner, addr1] = await ethers.getSigners();
+      const [, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       // Claim token
@@ -341,11 +313,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await tollToken.approve(bridge.address, 0xffffffffff);
@@ -386,11 +354,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await mockERC721.setApprovalForAll(bridge.address, true);
@@ -450,11 +414,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await mockERC1155.setApprovalForAll(bridge.address, true);
@@ -498,11 +458,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await tollToken.approve(bridge.address, 0xffffffffff);
@@ -546,11 +502,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await mockERC1155.setApprovalForAll(bridge.address, true);
@@ -590,14 +542,10 @@ describe("Toll Bridge", function () {
     });
 
     it("Claim a mixed fungible token that was transfered", async function () {
-      const [owner, addr1] = await ethers.getSigners();
+      const [, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await mockERC1155.mint(bridge.address, 5, 100, "0x");
@@ -621,14 +569,10 @@ describe("Toll Bridge", function () {
     });
 
     it("Claim a mixed fungible token that was transfered and the NFT does not exist", async function () {
-      const [owner, addr1] = await ethers.getSigners();
+      const [, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await mockERC1155.mint(bridge.address, 2, 100, "0x");
@@ -652,14 +596,10 @@ describe("Toll Bridge", function () {
     });
 
     it("Claim a mixed fungible token that was transfered and not enough of the NFTs exist", async function () {
-      const [owner, addr1] = await ethers.getSigners();
+      const [, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       // Claim token
@@ -722,11 +662,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await tollToken.approve(bridge.address, 0xffffffffff);
@@ -771,11 +707,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       // Generate fee verification
@@ -821,11 +753,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await tollToken.approve(bridge.address, 0xffffffffff);
@@ -866,11 +794,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       // Generate fee verification
@@ -910,11 +834,7 @@ describe("Toll Bridge", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       const relayTx = await bridge.relayMessage(

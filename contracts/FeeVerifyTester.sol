@@ -103,7 +103,7 @@ contract FeeVerifyTester is TollBridge {
 
 		remainingGas = gasleft();
 
-		hash.recover(signature) == feeVerifier;
+		isController(hash.recover(signature));
 
 		uint256 sigCheckGasUsed = remainingGas - gasleft();
 

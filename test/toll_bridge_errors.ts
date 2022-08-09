@@ -42,14 +42,10 @@ describe("Toll Bridge Errors", function () {
     });
 
     it("Fail to transfer an ERC20 token with an empty fee verification", async function () {
-      const [owner, addr1] = await ethers.getSigners();
+      const [, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await mockERC20.approve(bridge.address, 0xffffffffff);
@@ -73,11 +69,7 @@ describe("Toll Bridge Errors", function () {
       const [owner, addr1, addr2] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await mockERC20.approve(bridge.address, 0xffffffffff);
@@ -118,11 +110,7 @@ describe("Toll Bridge Errors", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await mockERC20.approve(bridge.address, 0xffffffffff);
@@ -165,11 +153,7 @@ describe("Toll Bridge Errors", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       // await tollToken.approve(bridge.address, 0xffffffffff);
@@ -213,11 +197,7 @@ describe("Toll Bridge Errors", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await tollToken.approve(bridge.address, ethers.constants.MaxUint256);
@@ -259,11 +239,7 @@ describe("Toll Bridge Errors", function () {
       const [owner, addr1] = await ethers.getSigners();
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       // await tollToken.approve(bridge.address, 0xffffffffff);
@@ -309,11 +285,7 @@ describe("Toll Bridge Errors", function () {
       const types = ["address", "uint256", "uint256", "bytes32", "bytes"];
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await mockERC20.approve(bridge.address, 0xffffffffff);
@@ -377,11 +349,7 @@ describe("Toll Bridge Errors", function () {
       const types = ["address", "uint256", "uint256", "bytes32", "bytes"];
 
       const Bridge = await ethers.getContractFactory("TollBridge");
-      const bridge = await upgrades.deployProxy(Bridge, [
-        owner.address,
-        addr1.address,
-        1,
-      ]);
+      const bridge = await upgrades.deployProxy(Bridge, [addr1.address, 1]);
       await bridge.deployed();
 
       await mockERC20.approve(bridge.address, 0xffffffffff);

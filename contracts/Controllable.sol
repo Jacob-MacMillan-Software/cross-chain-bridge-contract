@@ -24,4 +24,8 @@ contract Controllable is OwnableUpgradeable {
 		require(_controller != address(0), "Controller cannot be 0 address");
 		controllers[_controller] = _allow;
 	}
+
+	function isController(address _controller) public view returns (bool) {
+		return controllers[_controller];
+	}
 }

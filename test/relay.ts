@@ -32,11 +32,7 @@ describe("Toll Bridge with Real Relay", function () {
 
     // Initialize bridge
     const Bridge = await ethers.getContractFactory("TollBridge");
-    bridge = await upgrades.deployProxy(Bridge, [
-      owner.address,
-      owner.address,
-      100,
-    ]);
+    bridge = await upgrades.deployProxy(Bridge, [owner.address, 100]);
     await bridge.deployed();
 
     console.log(`ChainID: ${await bridge.chainId()}`);
