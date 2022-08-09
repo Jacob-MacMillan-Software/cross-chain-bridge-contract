@@ -356,6 +356,7 @@ describe("Toll Bridge Errors", function () {
       try {
         await bridge.transferFungible(mockERC20.address, 100, 2, forgedFeeData);
       } catch (err) {
+        // console.log(err);
         if (
           // @ts-ignore
           err.message.includes(
@@ -438,6 +439,7 @@ describe("Toll Bridge Errors", function () {
       try {
         await bridge.transferFungible(mockERC20.address, 100, 2, forgedFeeData);
       } catch (err) {
+        // console.log(err);
         if (
           // @ts-ignore
           err.message.includes(
