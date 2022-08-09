@@ -8,20 +8,20 @@ contract Controllable is OwnableUpgradeable {
 	// Errors
 	error ControllerOnly();
 
-	address private controller;
+	mapping (address => bool) private controllers;
 
 	modifier onlyController {
-		if(_msgSender() != controller && _msgSender() != owner()) revert ControllerOnly();
+		if(!controllers[_msgSender()] && _msgSender() != owner()) revert ControllerOnly();
 		_;
 	}
 
 	function __init_controller(address _controller) internal virtual onlyInitializing {
-		controller = _controller;
+		controllers[_controller] = true;
 		__Ownable_init();
 	}
 
-	function changeController(address _controller) external onlyOwner {
+	function changeController(address _controller, bool _allow) external onlyController {
 		require(_controller != address(0), "Controller cannot be 0 address");
-		controller = _controller;
+		controllers[_controller] = _allow;
 	}
 }
